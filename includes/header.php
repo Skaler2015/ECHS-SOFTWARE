@@ -35,7 +35,10 @@ $f           = flash();
             <a class="<?= $active==='dashboard'?'on':'' ?>" href="<?= BASE_URL ?>/dashboard.php?scheme=<?= $scheme ?>">Dashboard</a>
             <?php if ($scheme === 'ECHS'): ?>
                 <a class="<?= $active==='claims'?'on':'' ?>" href="<?= BASE_URL ?>/echs_claims.php?scheme=ECHS">Claims</a>
-                <a class="<?= $active==='upload'?'on':'' ?>" href="<?= BASE_URL ?>/echs_upload.php?scheme=ECHS">📥 Upload Excel</a>
+                <a class="<?= $active==='pending'?'on':'' ?>" href="<?= BASE_URL ?>/echs_pending.php?scheme=ECHS">Pending</a>
+                <a class="<?= $active==='reports'?'on':'' ?>" href="<?= BASE_URL ?>/echs_reports.php?scheme=ECHS">Reports</a>
+                <a class="<?= $active==='upload'?'on':'' ?>" href="<?= BASE_URL ?>/echs_upload.php?scheme=ECHS">📥 Upload</a>
+                <a class="<?= $active==='manage'?'on':'' ?>" href="<?= BASE_URL ?>/echs_manage.php?scheme=ECHS">Manage</a>
             <?php else: ?>
                 <a class="<?= $active==='patients'?'on':'' ?>"  href="<?= BASE_URL ?>/patients.php?scheme=<?= $scheme ?>">Patients</a>
                 <a class="<?= $active==='bills'?'on':'' ?>"     href="<?= BASE_URL ?>/bills.php?scheme=<?= $scheme ?>">Bills / Claims</a>

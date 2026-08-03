@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $summary = echs_import_uploads($files);
-            $msg = "Import complete: {$summary['read']} rows padhe, {$summary['inserted']} naye, {$summary['updated']} update.";
+            $msg = "Import complete: {$summary['read']} rows padhe, {$summary['inserted']} naye, {$summary['updated']} update, {$summary['changed']} status badle.";
             flash($msg, $summary['errors'] ? 'error' : 'success');
         } catch (Exception $e) {
             flash('Import me error: ' . $e->getMessage(), 'error');
@@ -67,6 +67,7 @@ require __DIR__ . '/includes/header.php';
         <div class="stat-card"><div class="stat-num"><?= $summary['read'] ?></div><div class="stat-lbl">Rows read</div></div>
         <div class="stat-card ok"><div class="stat-num"><?= $summary['inserted'] ?></div><div class="stat-lbl">New claims</div></div>
         <div class="stat-card info"><div class="stat-num"><?= $summary['updated'] ?></div><div class="stat-lbl">Updated</div></div>
+        <div class="stat-card warn"><div class="stat-num"><?= $summary['changed'] ?></div><div class="stat-lbl">Status changed</div></div>
     </div>
 
     <?php if ($summary['files']): ?>

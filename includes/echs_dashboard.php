@@ -25,6 +25,15 @@ try {
     }
 } catch (Exception $e) {}
 
+// outstanding + action needed
+$pending = ['n'=>0,'net'=>0]; $actionN = 0;
+try {
+    $p = db()->query("SELECT COUNT(*) n, COALESCE(SUM(net_claim_amt),0) net FROM echs_claims WHERE " . echs_pending_condition())->fetch();
+    if ($p) $pending = $p;
+    $a = db()->query("SELECT COUNT(*) n FROM echs_claims WHERE followup=1 OR status LIKE '%Need More Information%'")->fetch();
+    $actionN = (int)($a['n'] ?? 0);
+} catch (Exception $e) {}
+
 $hasData = (int)$tot['n'] > 0;
 
 require __DIR__ . '/header.php';
@@ -53,6 +62,17 @@ require __DIR__ . '/header.php';
     <div class="stat-card warn"><div class="stat-num"><?= money($tot['net'] - $tot['app']) ?></div><div class="stat-lbl">Difference</div></div>
     <div class="stat-card info"><div class="stat-num"><?= number_format($tot['ipd']) ?></div><div class="stat-lbl">IPD (I)</div></div>
     <div class="stat-card"><div class="stat-num"><?= number_format($tot['opd']) ?></div><div class="stat-lbl">OPD (O)</div></div>
+</div>
+
+<div class="stat-grid">
+    <a class="stat-card warn" style="text-decoration:none;color:inherit" href="<?= BASE_URL ?>/echs_pending.php?scheme=ECHS">
+        <div class="stat-num"><?= money($pending['net']) ?></div><div class="stat-lbl">💰 Outstanding (<?= number_format($pending['n']) ?>) →</div></a>
+    <a class="stat-card" style="text-decoration:none;color:inherit;border-left-color:#dc3545" href="<?= BASE_URL ?>/echs_claims.php?scheme=ECHS&q=">
+        <div class="stat-num"><?= number_format($actionN) ?></div><div class="stat-lbl">🚩 Action needed</div></a>
+    <a class="stat-card info" style="text-decoration:none;color:inherit" href="<?= BASE_URL ?>/echs_reports.php?scheme=ECHS">
+        <div class="stat-num">📈</div><div class="stat-lbl">Reports &amp; Charts →</div></a>
+    <a class="stat-card" style="text-decoration:none;color:inherit" href="<?= BASE_URL ?>/echs_manage.php?scheme=ECHS">
+        <div class="stat-num">⚙️</div><div class="stat-lbl">Manage / Upload log →</div></a>
 </div>
 
 <div class="card">

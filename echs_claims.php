@@ -95,7 +95,7 @@ require __DIR__ . '/includes/header.php';
         <tbody>
         <?php foreach ($rows as $c): ?>
             <tr>
-                <td><?= e($c['claim_id']) ?></td>
+                <td><a class="link" href="<?= BASE_URL ?>/echs_claim.php?scheme=ECHS&id=<?= urlencode($c['claim_id']) ?>"><?= e($c['claim_id']) ?></a><?php if (!empty($c['followup'])): ?> <span title="Follow-up flagged">🚩</span><?php endif; ?></td>
                 <td><?= e($c['card_id']) ?></td>
                 <td><?= e($c['esm_name']) ?></td>
                 <td><?= e($c['patient_name']) ?></td>
