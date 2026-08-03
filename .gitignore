@@ -1,0 +1,11 @@
+# Real DB credentials - never commit
+config/secrets.php
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.log
+
+# Uploaded files (keep folder, ignore contents)
+uploads/*
+!uploads/index.html

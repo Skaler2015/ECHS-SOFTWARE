@@ -1,0 +1,178 @@
+/* ============================================================
+   Noble Health Software - Stylesheet
+   ============================================================ */
+:root{
+    --scheme-color:#0d6efd;
+    --bg:#f4f6fa; --card:#fff; --ink:#1f2733; --muted:#6b7280;
+    --line:#e5e7eb; --primary:#0d6efd; --ok:#198754; --warn:#f59e0b;
+    --danger:#dc3545; --info:#0dcaf0; --radius:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI',system-ui,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2,h3{margin:0 0 .4em}
+.muted{color:var(--muted)}
+.small{font-size:.85em}
+.r{text-align:right}
+.nowrap{white-space:nowrap}
+.container{max-width:1150px;margin:0 auto;padding:22px 18px 60px}
+
+/* ---- Top bar ---- */
+.topbar{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.06);position:sticky;top:0;z-index:20}
+.topbar-inner{max-width:1150px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:10px 18px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:1.1rem;color:var(--ink);display:flex;align-items:center;gap:6px}
+.brand-mark{color:var(--scheme-color)}
+.scheme-badge{color:#fff;font-weight:600;font-size:.8rem;padding:3px 10px;border-radius:20px}
+.topnav{display:flex;gap:4px;flex-wrap:wrap;margin-left:6px}
+.topnav a{padding:6px 12px;border-radius:8px;color:var(--ink);font-size:.92rem}
+.topnav a:hover{background:var(--bg);text-decoration:none}
+.topnav a.on{background:var(--scheme-color);color:#fff}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:.9rem}
+.topbar-right .user{color:var(--muted)}
+.topbar-right .logout{color:var(--danger)}
+.topbar-right .switch{color:var(--muted)}
+
+/* ---- Page head ---- */
+.page-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:6px 0 16px;flex-wrap:wrap}
+.page-head h1{font-size:1.4rem;margin:0}
+.page-actions{display:flex;gap:8px}
+
+/* ---- Buttons ---- */
+.btn{display:inline-block;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;border-radius:9px;cursor:pointer;font-size:.92rem;transition:.15s;font-family:inherit}
+.btn:hover{background:var(--bg);text-decoration:none}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{filter:brightness(.94);background:var(--primary)}
+.btn-light{background:var(--bg)}
+.btn-block{width:100%}
+.btn-x{border:none;background:#fee2e2;color:var(--danger);width:28px;height:28px;border-radius:7px;cursor:pointer}
+.link{font-size:.85rem;margin-left:8px}
+.link.danger{color:var(--danger)}
+
+/* ---- Cards ---- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.03)}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.card-head h2{font-size:1.05rem;margin:0}
+
+/* ---- Stat cards ---- */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.stat-card{background:#fff;border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:10px;padding:14px 16px}
+.stat-card.warn{border-left-color:var(--warn)}
+.stat-card.ok{border-left-color:var(--ok)}
+.stat-card.info{border-left-color:var(--info)}
+.stat-card.money{border-left-color:#7c3aed}
+.stat-num{font-size:1.5rem;font-weight:700}
+.stat-lbl{color:var(--muted);font-size:.85rem}
+
+/* ---- Tables ---- */
+.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
+.tbl th,.tbl td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left}
+.tbl thead th{background:#f8fafc;color:var(--muted);font-weight:600;font-size:.82rem;text-transform:uppercase;letter-spacing:.02em}
+.tbl tbody tr:hover{background:#f8fafc}
+.tbl tfoot td{border-top:2px solid var(--line);background:#f8fafc}
+
+/* ---- Pills / status ---- */
+.pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.78rem;font-weight:600}
+.pill-pending{background:#fef3c7;color:#92400e}
+.pill-submitted{background:#dbeafe;color:#1e40af}
+.pill-paid{background:#dcfce7;color:#166534}
+.pill-rejected{background:#fee2e2;color:#991b1b}
+
+/* ---- Forms ---- */
+.form label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:4px;font-weight:600}
+.form input,.form select,.form textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:.95rem;font-family:inherit;background:#fff}
+.form input:focus,.form select:focus,.form textarea:focus{outline:none;border-color:var(--scheme-color);box-shadow:0 0 0 3px rgba(13,110,253,.12)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.col2{grid-column:span 2}
+.col3{grid-column:1/-1}
+.fld{margin-bottom:2px}
+.form-actions{margin-top:16px;display:flex;gap:10px}
+.section-title{margin:18px 0 8px;font-size:1rem;border-top:1px solid var(--line);padding-top:14px}
+
+/* ---- Search bar ---- */
+.searchbar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.searchbar input[type=text],.searchbar input[type=date],.searchbar select{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:.92rem}
+.searchbar input[type=text]{min-width:240px;flex:1}
+.searchbar label.inline{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
+
+/* ---- Bill items table ---- */
+.items-tbl input{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:.9rem}
+.items-tbl td{padding:5px 6px}
+.totals{max-width:340px;margin-left:auto;margin-top:12px}
+.totrow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line)}
+.totrow input{width:130px;padding:6px 8px;border:1px solid var(--line);border-radius:7px}
+.totrow.grand{font-size:1.15rem;font-weight:700;border-bottom:none;border-top:2px solid var(--ink);margin-top:4px;padding-top:10px}
+
+/* ---- Flash ---- */
+.flash{padding:11px 15px;border-radius:9px;margin-bottom:16px;font-size:.92rem}
+.flash-success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.flash-error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+
+/* ---- Login ---- */
+.login-page{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0d6efd15,#198a5415)}
+.login-card{background:#fff;padding:36px 32px;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.12);width:100%;max-width:380px;text-align:center}
+.login-logo{font-size:2.6rem;color:var(--primary)}
+.login-card h1{font-size:1.3rem;margin:6px 0 2px}
+.login-sub{color:var(--muted);font-size:.85rem;margin-bottom:20px}
+.login-card form{text-align:left}
+.login-card label{display:block;font-size:.82rem;color:var(--muted);margin:10px 0 4px;font-weight:600}
+.login-card input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:.95rem}
+.login-card .btn{margin-top:18px}
+.login-foot{color:var(--muted);font-size:.78rem;margin-top:18px}
+
+/* ---- Home / scheme chooser ---- */
+.home-title{font-size:1.6rem;margin-top:10px}
+.home-sub{color:var(--muted);margin-bottom:24px}
+.scheme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.scheme-tile{background:#fff;border:1px solid var(--line);border-top:5px solid var(--tile);border-radius:16px;padding:24px;color:var(--ink);transition:.18s;display:block}
+.scheme-tile:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,.1);text-decoration:none}
+.scheme-tile-icon{font-size:2.4rem}
+.scheme-tile-title{font-size:1.5rem;font-weight:700;color:var(--tile)}
+.scheme-tile-name{color:var(--muted);font-size:.9rem;margin-bottom:14px}
+.scheme-tile-stats{display:flex;gap:16px;font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+.scheme-tile-stats strong{color:var(--ink);font-size:1.05rem;display:block}
+.scheme-tile-amount{margin-top:10px;font-weight:600}
+.scheme-tile-open{margin-top:12px;color:var(--tile);font-weight:600}
+.home-links{margin-top:24px}
+
+/* ---- Footer ---- */
+.footer{text-align:center;color:var(--muted);font-size:.82rem;padding:24px}
+
+/* ---- Print / Invoice ---- */
+.print-page{background:#e9edf3}
+.print-toolbar{max-width:800px;margin:16px auto;display:flex;gap:10px}
+.invoice{max-width:800px;margin:0 auto 40px;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.inv-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--scheme-color);padding-bottom:14px;margin-bottom:16px}
+.inv-head h1{font-size:1.5rem;margin:0}
+.inv-head p{margin:2px 0;color:var(--muted);font-size:.88rem}
+.inv-scheme{color:#fff;padding:12px 18px;border-radius:8px;text-align:center;font-weight:700}
+.inv-meta table{width:100%;border-collapse:collapse;margin-bottom:16px}
+.inv-meta td{color:var(--muted);font-size:.82rem;padding:3px 8px;width:14%}
+.inv-meta th{text-align:left;padding:3px 8px;font-size:.92rem}
+.inv-items{width:100%;border-collapse:collapse;font-size:.9rem}
+.inv-items th,.inv-items td{border:1px solid var(--line);padding:7px 9px}
+.inv-items thead th{background:#f1f5f9}
+.inv-items tfoot td{border:none;padding:5px 9px}
+.inv-items tfoot tr.grand td{font-size:1.1rem;font-weight:700;border-top:2px solid var(--ink)}
+.inv-remarks{margin-top:14px;font-size:.9rem}
+.inv-foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:40px}
+.inv-foot .sign{text-align:center;border-top:1px solid var(--ink);padding-top:6px}
+
+@media print{
+    .no-print{display:none!important}
+    body{background:#fff}
+    .invoice{box-shadow:none;margin:0;max-width:100%;padding:0}
+}
+
+/* ---- Responsive ---- */
+@media(max-width:720px){
+    .grid2,.grid3,.grid4{grid-template-columns:1fr}
+    .col2,.col3{grid-column:auto}
+    .topnav{width:100%;order:3}
+    .topbar-right{width:100%;order:2;margin-left:0}
+    .tbl{font-size:.82rem}
+    .tbl thead{display:none}
+    .tbl.items-tbl thead{display:table-header-group}
+}

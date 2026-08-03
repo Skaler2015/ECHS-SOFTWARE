@@ -1,0 +1,45 @@
+name: Deploy to Hosting (noble.subhashkaler.com)
+
+# Jab bhi is branch par code push hoga, files apne aap hosting par
+# FTP se upload ho jayengi.
+on:
+  push:
+    branches:
+      - claude/echs-online-software-do3gb3
+      - main
+  workflow_dispatch:   # manually bhi chala sakte hain (Actions tab se)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📤 Upload to hosting via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          # Yeh 3 values GitHub repo ki Settings > Secrets me daalni hain:
+          #   FTP_SERVER    = aapke hosting ka FTP host (jaise ftp.subhashkaler.com)
+          #   FTP_USERNAME  = FTP username
+          #   FTP_PASSWORD  = FTP password
+          server:   ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+
+          # Subdomain ki folder path. Aam taur par:
+          #   noble.subhashkaler.com  ->  /noble/  ya  /public_html/noble/
+          # Apni hosting ke hisaab se FTP_REMOTE_DIR secret set karein (optional).
+          server-dir: ${{ secrets.FTP_REMOTE_DIR || './' }}
+
+          # Yeh files hosting par upload NAHI hongi (developer/config files).
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/README.md
+            **/DEPLOY.md
+            **/.cpanel.yml
+            config/secrets.php
+            config/secrets.sample.php
+            uploads/**
