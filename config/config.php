@@ -46,4 +46,4 @@ $SCHEMES = [
 // ---- Error reporting: keep OFF in production ----
 // While setting up you can turn this on. On live hosting keep display_errors off.
 error_reporting(E_ALL);
-ini_set('display_errors', '0'); // change to '1' only while debugging
+ini_set('display_errors', '1'); // TEMP: debugging on — set back to '0' after fixing
