@@ -27,10 +27,12 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           port:     21
+          timeout:  120000
 
-          # noble.subhashkaler.com subdomain ki folder (Hostinger).
-          # Agar zaroorat pade to FTP_REMOTE_DIR secret se badla ja sakta hai.
-          server-dir: ${{ secrets.FTP_REMOTE_DIR || 'public_html/noble/' }}
+          # Hostinger domain-FTP account already lands INSIDE public_html,
+          # so the target is just the subdomain folder "noble/".
+          # (Earlier "public_html/noble/" created a double public_html.)
+          server-dir: ${{ secrets.FTP_REMOTE_DIR || 'noble/' }}
 
           # Yeh files hosting par upload NAHI hongi (developer/config files).
           exclude: |
