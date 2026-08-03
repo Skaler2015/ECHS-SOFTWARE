@@ -13,35 +13,52 @@ require_once __DIR__ . '/../lib/SimpleXLS.php';
 
 use Shuchkin\SimpleXLS;
 
-/** Create the ECHS claims table if it does not exist yet. */
+/** Create/upgrade the ECHS claims table. Adds any missing columns so an
+ *  older/partial table is migrated automatically without losing data. */
 function echs_ensure_table() {
     static $done = false;
     if ($done) return;
-    db()->exec("CREATE TABLE IF NOT EXISTS `echs_claims` (
-        `claim_id`       VARCHAR(30)  NOT NULL PRIMARY KEY,
-        `region`         VARCHAR(80)  DEFAULT NULL,
-        `hospital_name`  VARCHAR(180) DEFAULT NULL,
-        `card_id`        VARCHAR(40)  DEFAULT NULL,
-        `esm_name`       VARCHAR(180) DEFAULT NULL,
-        `patient_name`   VARCHAR(180) DEFAULT NULL,
-        `patient_type`   VARCHAR(6)   DEFAULT NULL,
-        `admit_type`     VARCHAR(6)   DEFAULT NULL,
-        `accept_date`    DATE         DEFAULT NULL,
-        `accept_date_raw` VARCHAR(20) DEFAULT NULL,
-        `net_claim_amt`  DECIMAL(14,2) NOT NULL DEFAULT 0,
-        `approved_amt`   DECIMAL(14,2) NOT NULL DEFAULT 0,
-        `status`         VARCHAR(90)  DEFAULT NULL,
-        `status_code`    VARCHAR(30)  DEFAULT NULL,
-        `processed_on`   DATE         DEFAULT NULL,
-        `processed_on_raw` VARCHAR(20) DEFAULT NULL,
-        `first_seen`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        `updated_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        KEY `idx_status` (`status`),
-        KEY `idx_scode`  (`status_code`),
-        KEY `idx_card`   (`card_id`),
-        KEY `idx_ptype`  (`patient_type`),
-        KEY `idx_acc`    (`accept_date`)
+    $pdo = db();
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_claims` (
+        `claim_id` VARCHAR(30) NOT NULL PRIMARY KEY
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // desired columns (name => definition)
+    $cols = [
+        'region'          => "VARCHAR(80) NULL",
+        'hospital_name'   => "VARCHAR(180) NULL",
+        'card_id'         => "VARCHAR(40) NULL",
+        'esm_name'        => "VARCHAR(180) NULL",
+        'patient_name'    => "VARCHAR(180) NULL",
+        'patient_type'    => "VARCHAR(6) NULL",
+        'admit_type'      => "VARCHAR(6) NULL",
+        'accept_date'     => "DATE NULL",
+        'accept_date_raw' => "VARCHAR(20) NULL",
+        'net_claim_amt'   => "DECIMAL(14,2) NOT NULL DEFAULT 0",
+        'approved_amt'    => "DECIMAL(14,2) NOT NULL DEFAULT 0",
+        'status'          => "VARCHAR(90) NULL",
+        'status_code'     => "VARCHAR(30) NULL",
+        'processed_on'    => "DATE NULL",
+        'processed_on_raw'=> "VARCHAR(20) NULL",
+        'first_seen'      => "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        'updated_at'      => "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+    ];
+    $existing = [];
+    foreach ($pdo->query("SHOW COLUMNS FROM `echs_claims`") as $c) {
+        $existing[strtolower($c['Field'])] = true;
+    }
+    foreach ($cols as $name => $def) {
+        if (!isset($existing[strtolower($name)])) {
+            $pdo->exec("ALTER TABLE `echs_claims` ADD COLUMN `$name` $def");
+        }
+    }
+    // best-effort indexes (ignore if they already exist)
+    foreach ([
+        'idx_status'=>'status','idx_scode'=>'status_code','idx_card'=>'card_id',
+        'idx_ptype'=>'patient_type','idx_acc'=>'accept_date'
+    ] as $idx => $col) {
+        try { $pdo->exec("ALTER TABLE `echs_claims` ADD INDEX `$idx` (`$col`)"); } catch (Exception $e) {}
+    }
     $done = true;
 }
 

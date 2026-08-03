@@ -8,7 +8,6 @@ function scheme_counts($scheme) {
     if ($scheme === 'ECHS') {
         $c = ['labels'=>['Claims','Settled','Pending'], 'patients'=>0,'bills'=>0,'pending'=>0,'amount'=>0,'echs'=>true];
         try {
-            db()->exec("CREATE TABLE IF NOT EXISTS echs_claims (claim_id VARCHAR(30) PRIMARY KEY) ENGINE=InnoDB");
             $r = db()->query("SELECT COUNT(*) n, COALESCE(SUM(net_claim_amt),0) s FROM echs_claims")->fetch();
             $c['patients'] = (int)($r['n'] ?? 0);           // total claims
             $c['amount']   = (float)($r['s'] ?? 0);         // net amount
