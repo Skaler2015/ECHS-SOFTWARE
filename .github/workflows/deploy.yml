@@ -26,11 +26,11 @@ jobs:
           server:   ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          port:     21
 
-          # Subdomain ki folder path. Aam taur par:
-          #   noble.subhashkaler.com  ->  /noble/  ya  /public_html/noble/
-          # Apni hosting ke hisaab se FTP_REMOTE_DIR secret set karein (optional).
-          server-dir: ${{ secrets.FTP_REMOTE_DIR || './' }}
+          # noble.subhashkaler.com subdomain ki folder (Hostinger).
+          # Agar zaroorat pade to FTP_REMOTE_DIR secret se badla ja sakta hai.
+          server-dir: ${{ secrets.FTP_REMOTE_DIR || 'public_html/noble/' }}
 
           # Yeh files hosting par upload NAHI hongi (developer/config files).
           exclude: |
