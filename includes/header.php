@@ -20,9 +20,13 @@ $f           = flash();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($page_title) ?> · <?= e(APP_NAME) ?></title>
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
+    <link rel="manifest" href="<?= BASE_URL ?>/manifest.webmanifest">
+    <meta name="theme-color" content="<?= e($meta['color']) ?>">
+    <link rel="apple-touch-icon" href="<?= BASE_URL ?>/assets/icon.php?s=192">
     <style>:root{ --scheme-color: <?= e($meta['color']) ?>; }</style>
 </head>
 <body>
+<script>if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark');</script>
 <header class="topbar" style="border-top:4px solid <?= e($meta['color']) ?>">
     <div class="topbar-inner">
         <a class="brand" href="<?= BASE_URL ?>/home.php">
@@ -36,6 +40,8 @@ $f           = flash();
             <?php if ($scheme === 'ECHS'): ?>
                 <a class="<?= $active==='claims'?'on':'' ?>" href="<?= BASE_URL ?>/echs_claims.php?scheme=ECHS">Claims</a>
                 <a class="<?= $active==='pending'?'on':'' ?>" href="<?= BASE_URL ?>/echs_pending.php?scheme=ECHS">Pending</a>
+                <a class="<?= $active==='payments'?'on':'' ?>" href="<?= BASE_URL ?>/echs_payments.php?scheme=ECHS">Payments</a>
+                <a class="<?= $active==='tasks'?'on':'' ?>" href="<?= BASE_URL ?>/echs_tasks.php?scheme=ECHS">Tasks</a>
                 <a class="<?= $active==='reports'?'on':'' ?>" href="<?= BASE_URL ?>/echs_reports.php?scheme=ECHS">Reports</a>
                 <a class="<?= $active==='upload'?'on':'' ?>" href="<?= BASE_URL ?>/echs_upload.php?scheme=ECHS">📥 Upload</a>
                 <a class="<?= $active==='manage'?'on':'' ?>" href="<?= BASE_URL ?>/echs_manage.php?scheme=ECHS">Manage</a>
@@ -47,6 +53,7 @@ $f           = flash();
             <?php endif; ?>
         </nav>
         <div class="topbar-right">
+            <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Din/Raat mode">🌓</button>
             <a class="switch" href="<?= BASE_URL ?>/home.php" title="Switch scheme">⇄ Switch</a>
             <span class="user"><?= e($u['full_name'] ?? '') ?></span>
             <a class="logout" href="<?= BASE_URL ?>/logout.php">Logout</a>

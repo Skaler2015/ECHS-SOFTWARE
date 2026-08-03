@@ -44,4 +44,4 @@ jobs:
             **/.cpanel.yml
             config/secrets.php
             config/secrets.sample.php
-            uploads/**
+            uploads/echs/**

@@ -26,6 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($act === 'clear_uploads') {
         db()->exec("DELETE FROM echs_uploads");
         flash('Upload history clear ho gayi.');
+    } elseif ($act === 'email') {
+        db()->prepare("INSERT INTO settings (skey,svalue) VALUES ('echs_email',?) ON DUPLICATE KEY UPDATE svalue=VALUES(svalue)")
+            ->execute([trim($_POST['echs_email'] ?? '')]);
+        flash('Email recipient save ho gaya.');
     }
     redirect(BASE_URL . '/echs_manage.php?scheme=ECHS');
 }
@@ -33,9 +37,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $uploads = db()->query("SELECT * FROM echs_uploads ORDER BY id DESC LIMIT 100")->fetchAll();
 $total = db()->query("SELECT COUNT(*) n FROM echs_claims")->fetch()['n'];
 
+$cronKey = echs_cron_key();
+$cronUrl = BASE_URL . '/cron/weekly_summary.php?key=' . $cronKey;
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="page-head"><h1>⚙️ ECHS Data Management</h1></div>
+
+<div class="card">
+    <h2>🧰 Tools</h2>
+    <div class="tool-links">
+        <a class="btn" href="<?= BASE_URL ?>/echs_compare.php?scheme=ECHS">🔄 Recent Changes</a>
+        <a class="btn" href="<?= BASE_URL ?>/echs_activity.php?scheme=ECHS">📜 Activity Log</a>
+        <a class="btn" href="<?= BASE_URL ?>/echs_claim_edit.php?scheme=ECHS">➕ Manual Claim</a>
+        <?php if (echs_is_admin()): ?>
+        <a class="btn" href="<?= BASE_URL ?>/echs_users.php?scheme=ECHS">👥 Staff Users</a>
+        <a class="btn" href="<?= BASE_URL ?>/api/echs_backup.php">💾 Backup (JSON)</a>
+        <?php endif; ?>
+    </div>
+</div>
+
+<div class="card form">
+    <h2>📧 Weekly Email Summary</h2>
+    <form method="post">
+        <?= csrf_field() ?><input type="hidden" name="act" value="email">
+        <div class="grid2">
+            <div class="fld"><label>Email recipient</label><input type="email" name="echs_email" value="<?= e(setting('echs_email','')) ?>" placeholder="aapka@email.com"></div>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary">Save Email</button>
+            <a class="btn" target="_blank" href="<?= e($cronUrl) ?>">Test / Preview now →</a></div>
+    </form>
+    <p class="muted small">Har hafte apne aap summary email paane ke liye, Hostinger me <strong>Cron Jobs</strong> me yeh URL/command weekly set karein:</p>
+    <code style="display:block;word-break:break-all;background:#f8fafc;padding:8px;border-radius:6px"><?= e($cronUrl) ?></code>
+</div>
 
 <div class="card">
     <h2>Upload History</h2>

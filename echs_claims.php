@@ -15,6 +15,9 @@ $status = trim($_GET['status'] ?? '');
 $ptype  = trim($_GET['ptype'] ?? '');
 $from   = trim($_GET['from'] ?? '');
 $to     = trim($_GET['to'] ?? '');
+$amin   = trim($_GET['amin'] ?? '');
+$amax   = trim($_GET['amax'] ?? '');
+$sort   = $_GET['sort'] ?? 'accept';
 $page   = max(1, (int)($_GET['page'] ?? 1));
 $per    = 50;
 
@@ -27,7 +30,17 @@ if ($status !== '') { $where[] = 'status = ?'; $args[] = $status; }
 if ($ptype !== '')  { $where[] = 'patient_type = ?'; $args[] = $ptype; }
 if ($from !== '')   { $where[] = 'accept_date >= ?'; $args[] = $from; }
 if ($to !== '')     { $where[] = 'accept_date <= ?'; $args[] = $to; }
+if ($amin !== '')   { $where[] = 'net_claim_amt >= ?'; $args[] = (float)$amin; }
+if ($amax !== '')   { $where[] = 'net_claim_amt <= ?'; $args[] = (float)$amax; }
 $wsql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+
+$orderMap = [
+    'accept' => '(accept_date IS NULL), accept_date DESC, claim_id DESC',
+    'net'    => 'net_claim_amt DESC',
+    'app'    => 'approved_amt DESC',
+    'claim'  => 'claim_id DESC',
+];
+$orderBy = $orderMap[$sort] ?? $orderMap['accept'];
 
 // totals for current filter
 $tot = db()->prepare("SELECT COUNT(*) n, COALESCE(SUM(net_claim_amt),0) net, COALESCE(SUM(approved_amt),0) app FROM echs_claims $wsql");
@@ -38,19 +51,21 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 $page = min($page, $totalPages);
 $offset = ($page - 1) * $per;
 
-$listSql = "SELECT * FROM echs_claims $wsql ORDER BY (accept_date IS NULL), accept_date DESC, claim_id DESC LIMIT $per OFFSET $offset";
+$listSql = "SELECT * FROM echs_claims $wsql ORDER BY $orderBy LIMIT $per OFFSET $offset";
 $st = db()->prepare($listSql);
 $st->execute($args);
 $rows = $st->fetchAll();
 
-$qs = http_build_query(['scheme'=>'ECHS','q'=>$q,'status'=>$status,'ptype'=>$ptype,'from'=>$from,'to'=>$to]);
+$qs = http_build_query(['scheme'=>'ECHS','q'=>$q,'status'=>$status,'ptype'=>$ptype,'from'=>$from,'to'=>$to,'amin'=>$amin,'amax'=>$amax,'sort'=>$sort]);
 
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="page-head">
     <h1>ECHS Claims</h1>
     <div class="page-actions">
-        <a class="btn btn-primary" href="<?= BASE_URL ?>/echs_upload.php?scheme=ECHS">📥 Upload Excel</a>
+        <a class="btn btn-primary" href="<?= BASE_URL ?>/echs_upload.php?scheme=ECHS">📥 Upload</a>
+        <a class="btn" href="<?= BASE_URL ?>/echs_claim_edit.php?scheme=ECHS">➕ New</a>
+        <a class="btn" href="<?= BASE_URL ?>/api/echs_export_xls.php?<?= e($qs) ?>">⬇ Excel</a>
         <a class="btn" href="<?= BASE_URL ?>/api/echs_export_csv.php?<?= e($qs) ?>">⬇ CSV</a>
     </div>
 </div>
@@ -71,6 +86,14 @@ require __DIR__ . '/includes/header.php';
     </select>
     <label class="inline">From <input type="date" name="from" value="<?= e($from) ?>"></label>
     <label class="inline">To <input type="date" name="to" value="<?= e($to) ?>"></label>
+    <label class="inline">₹ <input type="number" name="amin" value="<?= e($amin) ?>" placeholder="min" style="width:90px"></label>
+    <label class="inline">– <input type="number" name="amax" value="<?= e($amax) ?>" placeholder="max" style="width:90px"></label>
+    <select name="sort">
+        <option value="accept" <?= $sort==='accept'?'selected':'' ?>>Newest</option>
+        <option value="net" <?= $sort==='net'?'selected':'' ?>>Highest Net</option>
+        <option value="app" <?= $sort==='app'?'selected':'' ?>>Highest Approved</option>
+        <option value="claim" <?= $sort==='claim'?'selected':'' ?>>Claim ID</option>
+    </select>
     <button class="btn btn-primary">Filter</button>
     <?php if ($q||$status||$ptype||$from||$to): ?><a class="btn btn-light" href="<?= BASE_URL ?>/echs_claims.php?scheme=ECHS">Clear</a><?php endif; ?>
 </form>

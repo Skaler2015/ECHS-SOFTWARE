@@ -82,8 +82,112 @@ function echs_ensure_table() {
         `uploaded_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+    // payments received against claims
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_payments` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `claim_id` VARCHAR(30) NULL,
+        `amount` DECIMAL(14,2) NOT NULL DEFAULT 0,
+        `pay_date` DATE NULL,
+        `utr` VARCHAR(60) NULL,
+        `mode` VARCHAR(30) NULL,
+        `remarks` VARCHAR(255) NULL,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY `idx_p_claim` (`claim_id`), KEY `idx_p_date` (`pay_date`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // document attachments
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_docs` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `claim_id` VARCHAR(30) NULL,
+        `stored_name` VARCHAR(160) NULL,
+        `orig_name` VARCHAR(200) NULL,
+        `size` INT DEFAULT 0,
+        `uploaded_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY `idx_d_claim` (`claim_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // follow-up tasks
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_tasks` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `claim_id` VARCHAR(30) NULL,
+        `title` VARCHAR(255) NOT NULL,
+        `due_date` DATE NULL,
+        `done` TINYINT(1) NOT NULL DEFAULT 0,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `done_at` DATETIME NULL,
+        KEY `idx_t_done` (`done`), KEY `idx_t_due` (`due_date`), KEY `idx_t_claim` (`claim_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // contacts per card
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_contacts` (
+        `card_id` VARCHAR(40) NOT NULL PRIMARY KEY,
+        `name` VARCHAR(180) NULL,
+        `phone` VARCHAR(40) NULL,
+        `address` VARCHAR(255) NULL,
+        `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // activity log
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_activity` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `who` VARCHAR(120) NULL,
+        `action` VARCHAR(80) NULL,
+        `detail` VARCHAR(255) NULL,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
     $done = true;
 }
+
+/** Log an activity row (best effort). */
+function echs_log($action, $detail = '') {
+    try {
+        echs_ensure_table();
+        $u = function_exists('current_user') ? (current_user()['full_name'] ?? 'system') : 'system';
+        db()->prepare("INSERT INTO echs_activity (who,action,detail) VALUES (?,?,?)")
+            ->execute([$u, $action, mb_substr((string)$detail, 0, 255)]);
+    } catch (Exception $e) {}
+}
+
+/** Get (or create) the cron key used to authorise the weekly email URL. */
+function echs_cron_key() {
+    $k = setting('cron_key', '');
+    if ($k === '') {
+        $k = bin2hex(random_bytes(8));
+        db()->prepare("INSERT INTO settings (skey,svalue) VALUES ('cron_key',?) ON DUPLICATE KEY UPDATE svalue=VALUES(svalue)")->execute([$k]);
+    }
+    return $k;
+}
+
+/** Build the weekly summary text (used by cron + preview). */
+function echs_weekly_summary_text() {
+    echs_ensure_table();
+    $tot = db()->query("SELECT COUNT(*) n, COALESCE(SUM(net_claim_amt),0) net, COALESCE(SUM(approved_amt),0) app FROM echs_claims")->fetch();
+    $pend = db()->query("SELECT COUNT(*) n, COALESCE(SUM(net_claim_amt),0) net FROM echs_claims WHERE " . echs_pending_condition())->fetch();
+    $chg = db()->query("SELECT COUNT(*) n FROM echs_claim_history WHERE changed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND from_status IS NOT NULL")->fetch()['n'];
+    $recv = db()->query("SELECT COALESCE(SUM(amount),0) s FROM echs_payments")->fetch()['s'];
+    $overdue = db()->query("SELECT COUNT(*) n FROM echs_tasks WHERE done=0 AND due_date IS NOT NULL AND due_date < CURDATE()")->fetch()['n'];
+    $old90 = db()->query("SELECT COUNT(*) n, COALESCE(SUM(net_claim_amt),0) net FROM echs_claims WHERE " . echs_pending_condition() . " AND accept_date IS NOT NULL AND DATEDIFF(CURDATE(),accept_date) > 90")->fetch();
+
+    $rs = number_format((float)$tot['net']);
+    return "ECHS Weekly Summary — " . date('d-m-Y') . "\n"
+        . "-----------------------------------\n"
+        . "Total claims: " . number_format($tot['n']) . "\n"
+        . "Net claimed:  Rs " . number_format($tot['net']) . "\n"
+        . "Approved:     Rs " . number_format($tot['app']) . "\n"
+        . "Received:     Rs " . number_format($recv) . "\n"
+        . "Outstanding:  Rs " . number_format($pend['net']) . " (" . number_format($pend['n']) . " claims)\n"
+        . "90+ days old: " . number_format($old90['n']) . " claims (Rs " . number_format($old90['net']) . ")\n"
+        . "Status changes (7 days): " . number_format($chg) . "\n"
+        . "Overdue tasks: " . number_format($overdue) . "\n";
+}
+
+/** Current user's role ('admin' or 'staff'); admins can manage users/data. */
+function echs_role() {
+    $u = function_exists('current_user') ? current_user() : null;
+    return $u['role'] ?? 'admin';
+}
+function echs_is_admin() { return echs_role() === 'admin'; }
 
 function echs_parse_date($v) {
     $v = trim((string)$v);

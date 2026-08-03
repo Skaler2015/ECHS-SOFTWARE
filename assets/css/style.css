@@ -216,6 +216,27 @@ h1,h2,h3{margin:0 0 .4em}
 .bar-lbl{font-size:.7rem;color:var(--muted);margin-top:5px;white-space:nowrap}
 .bar-val{font-size:.7rem;color:var(--ink);font-weight:600;order:-1;margin-bottom:3px}
 
+/* ---- Docs / tasks / tools ---- */
+.doclist{list-style:none;margin:8px 0 0;padding:0}
+.doclist li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.inline-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tool-links{display:flex;gap:10px;flex-wrap:wrap}
+.row-overdue{background:#fff7ed}
+
+/* ---- Dark mode ---- */
+body.dark{--bg:#0f141a;--card:#161d26;--ink:#e5e9ef;--muted:#93a1b3;--line:#273140}
+body.dark .topbar{background:#161d26}
+body.dark .tbl thead th{background:#1b232e}
+body.dark .tbl tbody tr:hover{background:#1b232e}
+body.dark .tbl tfoot td{background:#1b232e}
+body.dark .stat-card,body.dark .card{background:#161d26}
+body.dark input,body.dark select,body.dark textarea{background:#0f141a;color:var(--ink);border-color:#273140}
+body.dark .btn{background:#1b232e;color:var(--ink);border-color:#273140}
+body.dark .btn-primary{background:var(--primary);color:#fff}
+body.dark .searchbar input,body.dark .searchbar select{background:#0f141a;color:var(--ink);border-color:#273140}
+body.dark code{background:#0f141a}
+.theme-toggle{cursor:pointer;background:none;border:none;font-size:1.1rem;color:var(--ink)}
+
 /* ---- Responsive ---- */
 @media(max-width:720px){
     .grid2,.grid3,.grid4{grid-template-columns:1fr}

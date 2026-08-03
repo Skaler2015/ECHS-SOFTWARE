@@ -34,6 +34,15 @@ $monthlySettled = array_reverse($monthlySettled);
 $maxAccept = 1; foreach ($monthlyAccept as $m) $maxAccept = max($maxAccept, (float)$m['net']);
 $maxSettled = 1; foreach ($monthlySettled as $m) $maxSettled = max($maxSettled, (float)$m['app']);
 
+// average turnaround (accept -> processed) for settled claims
+$tat = db()->query("SELECT AVG(DATEDIFF(processed_on, accept_date)) d, COUNT(*) n
+    FROM echs_claims WHERE status LIKE '%Settled%' AND processed_on IS NOT NULL AND accept_date IS NOT NULL
+    AND processed_on >= accept_date")->fetch();
+
+// top cards by total net
+$topCards = db()->query("SELECT card_id, MAX(esm_name) esm, COUNT(*) n, COALESCE(SUM(net_claim_amt),0) net, COALESCE(SUM(approved_amt),0) app
+    FROM echs_claims WHERE card_id IS NOT NULL AND card_id<>'' GROUP BY card_id ORDER BY net DESC LIMIT 15")->fetchAll();
+
 function mlabel($ym){ $ts = strtotime($ym.'-01'); return $ts?date('M y',$ts):$ym; }
 
 // conic gradient for category donut
@@ -47,8 +56,15 @@ require __DIR__ . '/includes/header.php';
 <div class="page-head">
     <h1>📈 ECHS Reports</h1>
     <div class="page-actions">
-        <a class="btn" href="<?= BASE_URL ?>/api/echs_export_csv.php?scheme=ECHS">⬇ CSV (all)</a>
+        <a class="btn" target="_blank" href="<?= BASE_URL ?>/echs_report_print.php?scheme=ECHS">🖨️ Print / PDF</a>
+        <a class="btn" href="<?= BASE_URL ?>/api/echs_export_xls.php?scheme=ECHS">⬇ Excel</a>
+        <a class="btn" href="<?= BASE_URL ?>/api/echs_export_csv.php?scheme=ECHS">⬇ CSV</a>
     </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card info"><div class="stat-num"><?= $tat['d']!==null?round($tat['d']).' din':'-' ?></div><div class="stat-lbl">Avg. settle time (accept→processed)</div></div>
+    <div class="stat-card"><div class="stat-num"><?= number_format((int)$tat['n']) ?></div><div class="stat-lbl">Settled (with dates)</div></div>
 </div>
 
 <div class="detail-grid">
@@ -104,6 +120,24 @@ require __DIR__ . '/includes/header.php';
         <?php endforeach; ?>
     </div>
     <?php endif; ?>
+</div>
+
+<div class="card">
+    <h2>Top Cards (rakam ke hisaab se)</h2>
+    <table class="tbl">
+        <thead><tr><th>Card ID</th><th>ESM</th><th class="r">Claims</th><th class="r">Net</th><th class="r">Approved</th></tr></thead>
+        <tbody>
+        <?php foreach ($topCards as $t): ?>
+            <tr>
+                <td><a class="link" href="<?= BASE_URL ?>/echs_claims.php?scheme=ECHS&q=<?= urlencode($t['card_id']) ?>"><?= e($t['card_id']) ?></a></td>
+                <td><?= e($t['esm']) ?></td>
+                <td class="r"><?= number_format($t['n']) ?></td>
+                <td class="r"><?= money($t['net']) ?></td>
+                <td class="r"><?= money($t['app']) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
 </div>
 
 <div class="card">
