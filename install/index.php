@@ -5,8 +5,7 @@
  * It creates all tables and your admin login.
  * DELETE this /install/ folder after setup for security.
  */
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php'; // pulls in config + database + helpers (e(), etc.)
 
 $done = false; $error = ''; $step = 'form';
 
