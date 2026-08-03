@@ -33,10 +33,15 @@ $f           = flash();
         </div>
         <nav class="topnav">
             <a class="<?= $active==='dashboard'?'on':'' ?>" href="<?= BASE_URL ?>/dashboard.php?scheme=<?= $scheme ?>">Dashboard</a>
-            <a class="<?= $active==='patients'?'on':'' ?>"  href="<?= BASE_URL ?>/patients.php?scheme=<?= $scheme ?>">Patients</a>
-            <a class="<?= $active==='bills'?'on':'' ?>"     href="<?= BASE_URL ?>/bills.php?scheme=<?= $scheme ?>">Bills / Claims</a>
-            <a class="<?= $active==='medicines'?'on':'' ?>" href="<?= BASE_URL ?>/medicines.php?scheme=<?= $scheme ?>">Medicines</a>
-            <a class="<?= $active==='reports'?'on':'' ?>"   href="<?= BASE_URL ?>/reports.php?scheme=<?= $scheme ?>">Reports</a>
+            <?php if ($scheme === 'ECHS'): ?>
+                <a class="<?= $active==='claims'?'on':'' ?>" href="<?= BASE_URL ?>/echs_claims.php?scheme=ECHS">Claims</a>
+                <a class="<?= $active==='upload'?'on':'' ?>" href="<?= BASE_URL ?>/echs_upload.php?scheme=ECHS">📥 Upload Excel</a>
+            <?php else: ?>
+                <a class="<?= $active==='patients'?'on':'' ?>"  href="<?= BASE_URL ?>/patients.php?scheme=<?= $scheme ?>">Patients</a>
+                <a class="<?= $active==='bills'?'on':'' ?>"     href="<?= BASE_URL ?>/bills.php?scheme=<?= $scheme ?>">Bills / Claims</a>
+                <a class="<?= $active==='medicines'?'on':'' ?>" href="<?= BASE_URL ?>/medicines.php?scheme=<?= $scheme ?>">Medicines</a>
+                <a class="<?= $active==='reports'?'on':'' ?>"   href="<?= BASE_URL ?>/reports.php?scheme=<?= $scheme ?>">Reports</a>
+            <?php endif; ?>
         </nav>
         <div class="topbar-right">
             <a class="switch" href="<?= BASE_URL ?>/home.php" title="Switch scheme">⇄ Switch</a>

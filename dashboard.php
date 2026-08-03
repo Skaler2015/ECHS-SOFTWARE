@@ -6,6 +6,12 @@ $meta   = scheme_meta($scheme);
 $page_title = $meta['short'] . ' Dashboard';
 $active = 'dashboard';
 
+// ECHS uses a claims-based dashboard (Excel imported from the portal)
+if ($scheme === 'ECHS') {
+    require __DIR__ . '/includes/echs_dashboard.php';
+    return;
+}
+
 // stats
 $stat = ['patients'=>0,'bills'=>0,'pending'=>0,'submitted'=>0,'paid'=>0,'amount'=>0,'paid_amount'=>0];
 try {

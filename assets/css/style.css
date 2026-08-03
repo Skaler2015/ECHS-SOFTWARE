@@ -166,6 +166,16 @@ h1,h2,h3{margin:0 0 .4em}
     .invoice{box-shadow:none;margin:0;max-width:100%;padding:0}
 }
 
+/* ---- Upload drop zone ---- */
+.upload-drop{border:2px dashed var(--scheme-color);border-radius:12px;padding:26px;text-align:center;background:#f8fafc;margin:14px 0}
+.upload-drop input[type=file]{display:block;margin:0 auto 10px;font-size:.9rem}
+.upload-drop label{display:block;color:var(--muted);font-size:.9rem;font-weight:600}
+
+/* ---- Pager ---- */
+.pager{display:flex;justify-content:space-between;align-items:center;margin-top:14px;flex-wrap:wrap;gap:10px}
+.pager-links{display:flex;gap:8px}
+.pill-info{background:#dbeafe;color:#1e40af}
+
 /* ---- Responsive ---- */
 @media(max-width:720px){
     .grid2,.grid3,.grid4{grid-template-columns:1fr}
