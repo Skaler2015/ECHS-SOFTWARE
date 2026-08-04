@@ -239,6 +239,45 @@ function echs_pending_condition() {
 }
 
 /**
+ * Build the WHERE clause + args for the claims list & exports from a
+ * request-like array. Keeps the page and CSV/XLS exports perfectly in sync.
+ * Returns [whereSql, args].
+ */
+function echs_build_filter(array $g) {
+    $where = []; $args = [];
+    $q     = trim($g['q'] ?? '');
+    $status= trim($g['status'] ?? '');
+    $ptype = trim($g['ptype'] ?? '');
+    $from  = trim($g['from'] ?? '');
+    $to    = trim($g['to'] ?? '');
+    $amin  = trim($g['amin'] ?? '');
+    $amax  = trim($g['amax'] ?? '');
+    $cat   = trim($g['cat'] ?? '');
+    $age   = trim($g['age'] ?? '');
+    $flag  = trim($g['flag'] ?? '');
+
+    if ($q !== '') {
+        $where[] = '(claim_id LIKE ? OR card_id LIKE ? OR esm_name LIKE ? OR patient_name LIKE ? OR settlement_id LIKE ? OR nmi_remarks LIKE ?)';
+        $l = "%$q%"; array_push($args, $l, $l, $l, $l, $l, $l);
+    }
+    if ($status !== '') { $where[] = 'status = ?'; $args[] = $status; }
+    if ($ptype !== '')  { $where[] = 'patient_type = ?'; $args[] = $ptype; }
+    if ($from !== '')   { $where[] = 'accept_date >= ?'; $args[] = $from; }
+    if ($to !== '')     { $where[] = 'accept_date <= ?'; $args[] = $to; }
+    if ($amin !== '')   { $where[] = 'net_claim_amt >= ?'; $args[] = (float)$amin; }
+    if ($amax !== '')   { $where[] = 'net_claim_amt <= ?'; $args[] = (float)$amax; }
+    if ($cat === 'settled')  $where[] = "status LIKE '%Settled%'";
+    elseif ($cat === 'rejected') $where[] = "(status LIKE '%Reject%' OR status LIKE '%Cancel%')";
+    elseif ($cat === 'process')  $where[] = echs_pending_condition();
+    if ($age !== '' && ctype_digit($age)) { $where[] = "accept_date IS NOT NULL AND DATEDIFF(CURDATE(),accept_date) > ?"; $args[] = (int)$age; }
+    if ($flag === 'fu')  $where[] = 'followup = 1';
+    if ($flag === 'nmi') $where[] = "(status LIKE '%Need More Information%' OR (nmi_remarks IS NOT NULL AND nmi_remarks <> ''))";
+    if ($flag === 'cred') $where[] = 'amt_credited > 0';
+
+    return [$where ? ('WHERE ' . implode(' AND ', $where)) : '', $args];
+}
+
+/**
  * Import a single .xls claim-list file.
  * $prev is a reference map claim_id => current status (for history + counts).
  */

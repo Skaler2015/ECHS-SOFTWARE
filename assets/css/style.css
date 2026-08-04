@@ -218,6 +218,20 @@ body.sb-open .sb-backdrop{display:block}
 .inline-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .tool-links{display:flex;gap:10px;flex-wrap:wrap}
 .row-overdue{background:#fff7ed}
+/* claims tabs + chips + bulk */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:9px 16px;color:var(--muted);font-weight:600;font-size:.9rem;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--brand);border-bottom-color:var(--brand)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.chip{padding:6px 13px;border:1px solid var(--line);border-radius:999px;font-size:.82rem;font-weight:600;color:var(--ink);background:#fff;transition:.14s}
+.chip:hover{border-color:var(--brand);color:var(--brand)}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.chip.clear{color:var(--danger);border-color:#fecaca}
+body.dark .chip,body.dark .tab{background:transparent}
+.bulkbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.th-sort{color:inherit;display:inline-flex;align-items:center;gap:2px}
+.th-sort:hover{color:var(--brand)}
 .report-type{border:1px solid var(--line);border-radius:12px;padding:14px}
 .rt-ic{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:8px}
 .nmi-box{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 16px;margin-bottom:18px}
