@@ -40,6 +40,8 @@ function echs_ensure_table() {
         'status_code'     => "VARCHAR(30) NULL",
         'processed_on'    => "DATE NULL",
         'processed_on_raw'=> "VARCHAR(20) NULL",
+        'nmi_date'        => "DATE NULL",
+        'nmi_remarks'     => "TEXT NULL",
         'notes'           => "TEXT NULL",
         'followup'        => "TINYINT(1) NOT NULL DEFAULT 0",
         'first_seen'      => "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",

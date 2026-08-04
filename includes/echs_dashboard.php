@@ -99,7 +99,7 @@ $agMax = max(1, max($agAll));
 /* ---------- widgets data ---------- */
 $recentClaims = db()->query("SELECT claim_id,patient_name,status,net_claim_amt FROM echs_claims ORDER BY updated_at DESC, claim_id DESC LIMIT 7")->fetchAll();
 $recentChg = db()->query("SELECT h.claim_id,h.from_status,h.to_status,h.changed_at,c.patient_name
-    FROM echs_claim_history h LEFT JOIN echs_claims c ON c.claim_id=h.claim_id
+    FROM echs_claim_history h LEFT JOIN echs_claims c ON c.claim_id = h.claim_id COLLATE utf8mb4_unicode_ci
     WHERE h.from_status IS NOT NULL ORDER BY h.id DESC LIMIT 7")->fetchAll();
 $recentPay = db()->query("SELECT * FROM echs_payments ORDER BY id DESC LIMIT 6")->fetchAll();
 $tasksToday = db()->query("SELECT * FROM echs_tasks WHERE done=0 ORDER BY (due_date IS NULL), due_date ASC LIMIT 7")->fetchAll();

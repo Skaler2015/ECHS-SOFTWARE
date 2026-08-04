@@ -7,7 +7,7 @@ $scheme = 'ECHS'; $meta = scheme_meta('ECHS'); $active = 'manage'; $page_title =
 
 $days = max(1, (int)($_GET['days'] ?? 30));
 $st = db()->prepare("SELECT h.*, c.patient_name, c.net_claim_amt FROM echs_claim_history h
-    LEFT JOIN echs_claims c ON c.claim_id=h.claim_id
+    LEFT JOIN echs_claims c ON c.claim_id = h.claim_id COLLATE utf8mb4_unicode_ci
     WHERE h.changed_at >= DATE_SUB(NOW(), INTERVAL ? DAY) AND h.from_status IS NOT NULL
     ORDER BY h.id DESC LIMIT 500");
 $st->execute([$days]);
