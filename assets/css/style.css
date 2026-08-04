@@ -230,6 +230,7 @@ body.sb-open .sb-backdrop{display:block}
 .chip.clear{color:var(--danger);border-color:#fecaca}
 body.dark .chip,body.dark .tab{background:transparent}
 .bulkbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.bulk-doc{display:inline-flex;align-items:center;gap:6px;padding-left:10px;border-left:1px solid var(--line)}
 .th-sort{color:inherit;display:inline-flex;align-items:center;gap:2px}
 .th-sort:hover{color:var(--brand)}
 .report-type{border:1px solid var(--line);border-radius:12px;padding:14px}

@@ -11,7 +11,7 @@ $active = 'claims';
 $id = trim($_GET['id'] ?? '');
 $c = [
     'claim_id'=>'','card_id'=>'','esm_name'=>'','patient_name'=>'','patient_type'=>'',
-    'admit_type'=>'','region'=>'','hospital_name'=>'','accept_date_raw'=>'','processed_on_raw'=>'',
+    'admit_type'=>'','region'=>'','hospital_name'=>'','doctor_name'=>'','accept_date_raw'=>'','processed_on_raw'=>'',
     'net_claim_amt'=>0,'approved_amt'=>0,'status'=>''
 ];
 $isEdit = false;
@@ -31,22 +31,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'card_id'=>trim($_POST['card_id']??''), 'esm_name'=>trim($_POST['esm_name']??''),
             'patient_name'=>trim($_POST['patient_name']??''), 'patient_type'=>trim($_POST['patient_type']??''),
             'admit_type'=>trim($_POST['admit_type']??''), 'region'=>trim($_POST['region']??''),
-            'hospital_name'=>trim($_POST['hospital_name']??''),
+            'hospital_name'=>trim($_POST['hospital_name']??''), 'doctor_name'=>trim($_POST['doctor_name']??''),
             'accept_raw'=>trim($_POST['accept_date_raw']??''), 'proc_raw'=>trim($_POST['processed_on_raw']??''),
             'net'=>(float)($_POST['net_claim_amt']??0), 'app'=>(float)($_POST['approved_amt']??0),
             'status'=>trim($_POST['status']??''),
         ];
         db()->prepare("INSERT INTO echs_claims
-            (claim_id,card_id,esm_name,patient_name,patient_type,admit_type,region,hospital_name,
+            (claim_id,card_id,esm_name,patient_name,patient_type,admit_type,region,hospital_name,doctor_name,
              accept_date,accept_date_raw,processed_on,processed_on_raw,net_claim_amt,approved_amt,status,status_code,updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
             ON DUPLICATE KEY UPDATE card_id=VALUES(card_id),esm_name=VALUES(esm_name),patient_name=VALUES(patient_name),
              patient_type=VALUES(patient_type),admit_type=VALUES(admit_type),region=VALUES(region),
-             hospital_name=VALUES(hospital_name),accept_date=VALUES(accept_date),accept_date_raw=VALUES(accept_date_raw),
+             hospital_name=VALUES(hospital_name),doctor_name=VALUES(doctor_name),accept_date=VALUES(accept_date),accept_date_raw=VALUES(accept_date_raw),
              processed_on=VALUES(processed_on),processed_on_raw=VALUES(processed_on_raw),
              net_claim_amt=VALUES(net_claim_amt),approved_amt=VALUES(approved_amt),status=VALUES(status),updated_at=NOW()")
           ->execute([$cid,$data['card_id'],$data['esm_name'],$data['patient_name'],$data['patient_type'],
-             $data['admit_type'],$data['region'],$data['hospital_name'],
+             $data['admit_type'],$data['region'],$data['hospital_name'],$data['doctor_name'],
              echs_parse_date($data['accept_raw']),$data['accept_raw']?:null,
              echs_parse_date($data['proc_raw']),$data['proc_raw']?:null,
              $data['net'],$data['app'],$data['status'],'MANUAL']);
@@ -74,6 +74,7 @@ require __DIR__ . '/includes/header.php';
         <div class="fld"><label>Admit Type</label><input name="admit_type" value="<?= e($c['admit_type']) ?>"></div>
         <div class="fld"><label>Region</label><input name="region" value="<?= e($c['region']) ?>"></div>
         <div class="fld"><label>Hospital</label><input name="hospital_name" value="<?= e($c['hospital_name']) ?>"></div>
+        <div class="fld"><label>Doctor</label><input name="doctor_name" list="doclist" value="<?= e($c['doctor_name'] ?? '') ?>" autocomplete="off"><datalist id="doclist"><?php foreach (echs_doctor_list() as $dn): ?><option value="<?= e($dn) ?>"></option><?php endforeach; ?></datalist></div>
         <div class="fld"><label>Accept Date (dd-mm-yyyy)</label><input name="accept_date_raw" value="<?= e($c['accept_date_raw']) ?>"></div>
         <div class="fld"><label>Processed On (dd-mm-yyyy)</label><input name="processed_on_raw" value="<?= e($c['processed_on_raw']) ?>"></div>
         <div class="fld"><label>Net Claim Amt</label><input type="number" step="0.01" name="net_claim_amt" value="<?= e($c['net_claim_amt']) ?>"></div>

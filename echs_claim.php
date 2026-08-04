@@ -18,9 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $act = $_POST['act'] ?? 'notes';
 
     if ($act === 'notes') {
-        db()->prepare("UPDATE echs_claims SET notes=?, followup=? WHERE claim_id=?")
-            ->execute([trim($_POST['notes'] ?? ''), isset($_POST['followup'])?1:0, $cid]);
-        flash('Notes save ho gaye.');
+        db()->prepare("UPDATE echs_claims SET notes=?, followup=?, doctor_name=? WHERE claim_id=?")
+            ->execute([trim($_POST['notes'] ?? ''), isset($_POST['followup'])?1:0, trim($_POST['doctor_name'] ?? ''), $cid]);
+        flash('Save ho gaya.');
     } elseif ($act === 'contact') {
         db()->prepare("INSERT INTO echs_contacts (card_id,name,phone,address,updated_at) VALUES (?,?,?,?,NOW())
                        ON DUPLICATE KEY UPDATE name=VALUES(name),phone=VALUES(phone),address=VALUES(address),updated_at=NOW()")
@@ -122,6 +122,7 @@ require __DIR__ . '/includes/header.php';
             <tr><td>Patient</td><th><?= e($c['patient_name']) ?></th></tr>
             <tr><td>Type</td><th><?= e($c['patient_type']) ?> (<?= $c['patient_type']==='I'?'IPD':'OPD' ?>) / <?= e($c['admit_type']) ?></th></tr>
             <tr><td>Hospital</td><th><?= e($c['hospital_name']) ?></th></tr>
+            <tr><td>Doctor</td><th><?= e($c['doctor_name'] ?: '-') ?></th></tr>
             <tr><td>Accept Date</td><th><?= e($c['accept_date_raw'] ?: '-') ?></th></tr>
             <tr><td>Processed On</td><th><?= e($c['processed_on_raw'] ?: '-') ?></th></tr>
             <tr><td>Net Claim Amt</td><th><?= money($c['net_claim_amt']) ?></th></tr>
@@ -144,12 +145,15 @@ require __DIR__ . '/includes/header.php';
     </div>
 
     <div class="card">
-        <h2>📝 Notes</h2>
+        <h2>🩺 Doctor &amp; Notes</h2>
         <form method="post">
             <?= csrf_field() ?><input type="hidden" name="act" value="notes"><input type="hidden" name="claim_id" value="<?= e($c['claim_id']) ?>">
+            <label>Doctor ka naam</label>
+            <input name="doctor_name" list="doclist" value="<?= e($c['doctor_name'] ?? '') ?>" placeholder="Dr. ka naam likhein" autocomplete="off" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px">
+            <datalist id="doclist"><?php foreach (echs_doctor_list() as $dn): ?><option value="<?= e($dn) ?>"></option><?php endforeach; ?></datalist>
             <label class="chk"><input type="checkbox" name="followup" value="1" <?= $c['followup']?'checked':'' ?>> Follow-up chahiye 🚩</label>
-            <textarea name="notes" rows="4" class="notes-area"><?= e($c['notes']) ?></textarea>
-            <div class="form-actions"><button class="btn btn-primary">Save Notes</button></div>
+            <textarea name="notes" rows="4" class="notes-area" placeholder="Notes..."><?= e($c['notes']) ?></textarea>
+            <div class="form-actions"><button class="btn btn-primary">Save</button></div>
         </form>
 
         <h2 style="margin-top:18px">📞 Contact (Card <?= e($c['card_id']) ?>)</h2>

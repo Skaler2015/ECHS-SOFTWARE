@@ -25,6 +25,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db()->prepare("UPDATE echs_claims SET followup=$val WHERE claim_id IN ($in)")->execute($ids);
             flash(count($ids) . " claims " . ($val?'flag':'unflag') . " ho gaye.");
         }
+    } elseif ($act === 'setdoctor' && !empty($_POST['ids']) && is_array($_POST['ids'])) {
+        $ids = array_values(array_filter(array_map('strval', $_POST['ids'])));
+        $doc = trim($_POST['doctor_name'] ?? '');
+        if ($ids && $doc !== '') {
+            $in = implode(',', array_fill(0, count($ids), '?'));
+            db()->prepare("UPDATE echs_claims SET doctor_name=? WHERE claim_id IN ($in)")->execute(array_merge([$doc], $ids));
+            echs_log('bulk_doctor', $doc . ' x' . count($ids));
+            flash(count($ids) . " claims me Dr. \"" . $doc . "\" set ho gaya.");
+        } else {
+            flash('Doctor ka naam likhein aur kam se kam ek claim select karein.', 'error');
+        }
     }
     redirect($ret);
 }
@@ -166,10 +177,15 @@ require __DIR__ . '/includes/header.php';
         <input type="hidden" name="return" value="<?= e($curUrl) ?>">
         <div class="bulkbar">
             <label class="chk"><input type="checkbox" id="selAll" onclick="selAll(this)"> Select all</label>
-            <button class="btn btn-light" name="act" value="flag">🚩 Flag selected</button>
+            <button class="btn btn-light" name="act" value="flag">🚩 Flag</button>
             <button class="btn btn-light" name="act" value="unflag">Unflag</button>
+            <span class="bulk-doc">
+                🩺 <input name="doctor_name" list="doclist" placeholder="Doctor ka naam" autocomplete="off" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px">
+                <button class="btn btn-light" name="act" value="setdoctor">Set doctor (selected)</button>
+            </span>
             <span class="muted small" id="selCount"></span>
         </div>
+        <datalist id="doclist"><?php foreach (echs_doctor_list() as $dn): ?><option value="<?= e($dn) ?>"></option><?php endforeach; ?></datalist>
         <div style="overflow-x:auto">
         <table class="tbl">
             <thead><tr>
@@ -194,7 +210,7 @@ require __DIR__ . '/includes/header.php';
                         <?php if (!empty($c['followup'])): ?> <span title="Follow-up">🚩</span><?php endif; ?>
                     </td>
                     <td><?= e($c['card_id']) ?></td>
-                    <td><strong><?= e($c['esm_name']) ?></strong><?php if($c['patient_name']!==$c['esm_name']): ?><br><span class="muted small"><?= e($c['patient_name']) ?></span><?php endif; ?></td>
+                    <td><strong><?= e($c['esm_name']) ?></strong><?php if($c['patient_name']!==$c['esm_name']): ?><br><span class="muted small"><?= e($c['patient_name']) ?></span><?php endif; ?><?php if(!empty($c['doctor_name'])): ?><br><span class="muted small">🩺 <?= e($c['doctor_name']) ?></span><?php endif; ?></td>
                     <td><?= e($c['patient_type']) ?>/<?= e($c['admit_type']) ?></td>
                     <td class="nowrap"><?= e($c['accept_date_raw'] ?: '-') ?></td>
                     <td><?= age_badge($c['age_days']) ?></td>

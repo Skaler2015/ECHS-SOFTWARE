@@ -40,6 +40,7 @@ function echs_ensure_table() {
         'status_code'     => "VARCHAR(30) NULL",
         'processed_on'    => "DATE NULL",
         'processed_on_raw'=> "VARCHAR(20) NULL",
+        'doctor_name'     => "VARCHAR(160) NULL",
         'nmi_date'        => "DATE NULL",
         'nmi_remarks'     => "TEXT NULL",
         'settlement_id'   => "VARCHAR(30) NULL",
@@ -257,8 +258,8 @@ function echs_build_filter(array $g) {
     $flag  = trim($g['flag'] ?? '');
 
     if ($q !== '') {
-        $where[] = '(claim_id LIKE ? OR card_id LIKE ? OR esm_name LIKE ? OR patient_name LIKE ? OR settlement_id LIKE ? OR nmi_remarks LIKE ?)';
-        $l = "%$q%"; array_push($args, $l, $l, $l, $l, $l, $l);
+        $where[] = '(claim_id LIKE ? OR card_id LIKE ? OR esm_name LIKE ? OR patient_name LIKE ? OR settlement_id LIKE ? OR nmi_remarks LIKE ? OR doctor_name LIKE ?)';
+        $l = "%$q%"; array_push($args, $l, $l, $l, $l, $l, $l, $l);
     }
     if ($status !== '') { $where[] = 'status = ?'; $args[] = $status; }
     if ($ptype !== '')  { $where[] = 'patient_type = ?'; $args[] = $ptype; }
@@ -570,6 +571,18 @@ function _echs_merge(array $r, $name, array &$summary) {
     } else {
         $summary['errors'][] = "$name: " . $r['error'];
     }
+}
+
+/** Distinct doctor names already entered (for autocomplete). */
+function echs_doctor_list() {
+    echs_ensure_table();
+    $out = [];
+    try {
+        foreach (db()->query("SELECT DISTINCT doctor_name FROM echs_claims WHERE doctor_name IS NOT NULL AND doctor_name<>'' ORDER BY doctor_name LIMIT 500") as $r) {
+            $out[] = $r['doctor_name'];
+        }
+    } catch (Exception $e) {}
+    return $out;
 }
 
 /** Distinct statuses with counts (for filters). */
