@@ -24,6 +24,7 @@ if ($scheme === 'ECHS') {
             ['k'=>'pending','t'=>'Pending & Aging','i'=>'clock','u'=>BASE_URL.'/echs_pending.php?scheme=ECHS'],
             ['k'=>'payments','t'=>'Payments','i'=>'card','u'=>BASE_URL.'/echs_payments.php?scheme=ECHS'],
             ['k'=>'tasks','t'=>'Tasks','i'=>'checks','u'=>BASE_URL.'/echs_tasks.php?scheme=ECHS'],
+            ['k'=>'doctors','t'=>'Doctors','i'=>'patients','u'=>BASE_URL.'/echs_doctors.php?scheme=ECHS'],
         ]],
         ['grp' => 'Data', 'items' => [
             ['k'=>'reports','t'=>'Reports','i'=>'chart','u'=>BASE_URL.'/echs_reports.php?scheme=ECHS'],

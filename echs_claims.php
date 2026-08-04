@@ -51,6 +51,7 @@ $amax   = trim($_GET['amax'] ?? '');
 $cat    = trim($_GET['cat'] ?? '');
 $age    = trim($_GET['age'] ?? '');
 $flag   = trim($_GET['flag'] ?? '');
+$doctor = trim($_GET['doctor'] ?? '');
 $sort   = $_GET['sort'] ?? 'accept';
 $dir    = (strtolower($_GET['dir'] ?? 'desc') === 'asc') ? 'ASC' : 'DESC';
 $page   = max(1, (int)($_GET['page'] ?? 1));
@@ -80,7 +81,7 @@ $st = db()->prepare("SELECT *, DATEDIFF(CURDATE(),accept_date) AS age_days FROM 
 $st->execute($args);
 $rows = $st->fetchAll();
 
-$qsAll = array_filter(['scheme'=>'ECHS','q'=>$q,'status'=>$status,'ptype'=>$ptype,'from'=>$from,'to'=>$to,'amin'=>$amin,'amax'=>$amax,'cat'=>$cat,'age'=>$age,'flag'=>$flag,'sort'=>$sort,'dir'=>strtolower($dir),'per'=>$per], fn($v)=>$v!=='' && $v!==null);
+$qsAll = array_filter(['scheme'=>'ECHS','q'=>$q,'status'=>$status,'ptype'=>$ptype,'from'=>$from,'to'=>$to,'amin'=>$amin,'amax'=>$amax,'cat'=>$cat,'age'=>$age,'flag'=>$flag,'doctor'=>$doctor,'sort'=>$sort,'dir'=>strtolower($dir),'per'=>$per], fn($v)=>$v!=='' && $v!==null);
 $qs = http_build_query($qsAll);
 $curUrl = BASE_URL . '/echs_claims.php?' . $qs;
 
@@ -136,6 +137,7 @@ require __DIR__ . '/includes/header.php';
     <a class="chip <?= $ptype==='I'?'on':'' ?>" href="<?= e(chip_url(['ptype'=>$ptype==='I'?'':'I'])) ?>">IPD</a>
     <a class="chip <?= $ptype==='O'?'on':'' ?>" href="<?= e(chip_url(['ptype'=>$ptype==='O'?'':'O'])) ?>">OPD</a>
     <a class="chip <?= ($from===date('Y-m-01'))?'on':'' ?>" href="<?= e(chip_url(['from'=>date('Y-m-01'),'to'=>date('Y-m-d')])) ?>">📅 Is mahine</a>
+    <?php if ($doctor!==''): ?><a class="chip on" href="<?= e(chip_url(['doctor'=>''])) ?>">🩺 <?= e($doctor) ?> ✕</a><?php endif; ?>
     <?php if ($q||$status||$ptype||$from||$to||$amin||$amax||$cat||$age||$flag): ?>
         <a class="chip clear" href="<?= BASE_URL ?>/echs_claims.php?scheme=ECHS">✕ Clear all</a>
     <?php endif; ?>
@@ -143,7 +145,7 @@ require __DIR__ . '/includes/header.php';
 
 <form class="searchbar" method="get">
     <input type="hidden" name="scheme" value="ECHS">
-    <?php foreach (['cat'=>$cat,'age'=>$age,'flag'=>$flag,'sort'=>$sort,'dir'=>strtolower($dir),'per'=>$per] as $k=>$v): ?><input type="hidden" name="<?= $k ?>" value="<?= e($v) ?>"><?php endforeach; ?>
+    <?php foreach (['cat'=>$cat,'age'=>$age,'flag'=>$flag,'doctor'=>$doctor,'sort'=>$sort,'dir'=>strtolower($dir),'per'=>$per] as $k=>$v): ?><input type="hidden" name="<?= $k ?>" value="<?= e($v) ?>"><?php endforeach; ?>
     <input type="text" name="q" value="<?= e($q) ?>" placeholder="Claim ID, Card, ESM, Patient, Settlement ID, remark...">
     <select name="status">
         <option value="">All status</option>

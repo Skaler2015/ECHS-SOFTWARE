@@ -137,6 +137,15 @@ function echs_ensure_table() {
         `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+    // doctors master
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_doctors` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `name` VARCHAR(160) NOT NULL UNIQUE,
+        `specialty` VARCHAR(120) NULL,
+        `phone` VARCHAR(40) NULL,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
     // activity log
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_activity` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -274,6 +283,8 @@ function echs_build_filter(array $g) {
     if ($flag === 'fu')  $where[] = 'followup = 1';
     if ($flag === 'nmi') $where[] = "(status LIKE '%Need More Information%' OR (nmi_remarks IS NOT NULL AND nmi_remarks <> ''))";
     if ($flag === 'cred') $where[] = 'amt_credited > 0';
+    $doctor = trim($g['doctor'] ?? '');
+    if ($doctor !== '') { $where[] = 'doctor_name = ?'; $args[] = $doctor; }
 
     return [$where ? ('WHERE ' . implode(' AND ', $where)) : '', $args];
 }
@@ -573,15 +584,16 @@ function _echs_merge(array $r, $name, array &$summary) {
     }
 }
 
-/** Distinct doctor names already entered (for autocomplete). */
+/** All known doctor names (master + used in claims), for autocomplete. */
 function echs_doctor_list() {
     echs_ensure_table();
-    $out = [];
+    $set = [];
     try {
-        foreach (db()->query("SELECT DISTINCT doctor_name FROM echs_claims WHERE doctor_name IS NOT NULL AND doctor_name<>'' ORDER BY doctor_name LIMIT 500") as $r) {
-            $out[] = $r['doctor_name'];
-        }
+        foreach (db()->query("SELECT name FROM echs_doctors ORDER BY name") as $r) $set[$r['name']] = true;
+        foreach (db()->query("SELECT DISTINCT doctor_name FROM echs_claims WHERE doctor_name IS NOT NULL AND doctor_name<>''") as $r) $set[$r['doctor_name']] = true;
     } catch (Exception $e) {}
+    $out = array_keys($set);
+    sort($out);
     return $out;
 }
 
