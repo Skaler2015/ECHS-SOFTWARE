@@ -44,19 +44,18 @@ if ($scheme === 'ECHS') {
 } else {
     $menu = [
         ['grp' => 'Main', 'items' => [
-            ['k'=>'dashboard','t'=>'Dashboard','i'=>'dashboard','u'=>BASE_URL.'/dashboard.php?scheme='.$scheme],
-            ['k'=>'patients','t'=>'Patients','i'=>'patients','u'=>BASE_URL.'/patients.php?scheme='.$scheme],
-            ['k'=>'bills','t'=>'Bills / Claims','i'=>'file','u'=>BASE_URL.'/bills.php?scheme='.$scheme],
-            ['k'=>'medicines','t'=>'Medicines','i'=>'pill','u'=>BASE_URL.'/medicines.php?scheme='.$scheme],
+            ['k'=>'dashboard','t'=>'Dashboard','i'=>'dashboard','u'=>BASE_URL.'/dashboard.php?scheme=RGHS'],
+            ['k'=>'claims','t'=>'Claims','i'=>'file','u'=>BASE_URL.'/rghs_claims.php?scheme=RGHS'],
         ]],
         ['grp' => 'Data', 'items' => [
-            ['k'=>'reports','t'=>'Reports','i'=>'chart','u'=>BASE_URL.'/reports.php?scheme='.$scheme],
+            ['k'=>'reports','t'=>'Reports','i'=>'chart','u'=>BASE_URL.'/rghs_reports.php?scheme=RGHS'],
+            ['k'=>'upload','t'=>'Upload Excel','i'=>'upload','u'=>BASE_URL.'/rghs_upload.php?scheme=RGHS'],
         ]],
         ['grp' => 'Account', 'items' => [
             ['k'=>'settings','t'=>'Settings','i'=>'settings','u'=>BASE_URL.'/settings.php'],
         ]],
     ];
-    $searchAction = BASE_URL.'/bills.php';
+    $searchAction = BASE_URL.'/rghs_claims.php';
 }
 
 // ---- notifications (real data, best-effort) ----

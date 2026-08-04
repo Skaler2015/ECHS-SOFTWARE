@@ -29,14 +29,15 @@ function scheme_counts($scheme) {
         } catch (Exception $e) {}
         return $c;
     }
-    $c = ['labels'=>['Patients','Bills','Pending'], 'patients'=>0,'bills'=>0,'pending'=>0,'amount'=>0,'echs'=>false];
+    // RGHS is now an upload-based claims tracker (rghs_claims).
+    $c = ['labels'=>['Claims','Approved','Pending'], 'patients'=>0,'bills'=>0,'pending'=>0,'amount'=>0,'echs'=>false];
     try {
-        $p = db()->prepare('SELECT COUNT(*) n FROM patients WHERE scheme=?'); $p->execute([$scheme]);
-        $c['patients'] = (int)$p->fetch()['n'];
-        $b = db()->prepare('SELECT COUNT(*) n, COALESCE(SUM(total_amount),0) s FROM bills WHERE scheme=?'); $b->execute([$scheme]);
-        $row = $b->fetch(); $c['bills'] = (int)$row['n']; $c['amount'] = (float)$row['s'];
-        $pd = db()->prepare("SELECT COUNT(*) n FROM bills WHERE scheme=? AND status='Pending'"); $pd->execute([$scheme]);
-        $c['pending'] = (int)$pd->fetch()['n'];
+        $r = db()->query("SELECT COUNT(*) n, COALESCE(SUM(claim_amt),0) s FROM rghs_claims")->fetch();
+        $c['patients'] = (int)($r['n'] ?? 0);
+        $c['amount']   = (float)($r['s'] ?? 0);
+        $ap = db()->query("SELECT COUNT(*) n FROM rghs_claims WHERE status LIKE '%APPROVED%' OR status LIKE '%Approved%'")->fetch();
+        $c['bills'] = (int)($ap['n'] ?? 0);
+        $c['pending'] = max(0, $c['patients'] - $c['bills']);
     } catch (Exception $e) {}
     return $c;
 }

@@ -11,6 +11,12 @@ if ($scheme === 'ECHS') {
     redirect(BASE_URL . '/echs.php');
 }
 
+// RGHS is now an upload-based claims tracker.
+if ($scheme === 'RGHS') {
+    require __DIR__ . '/includes/rghs_dashboard.php';
+    return;
+}
+
 // stats
 $stat = ['patients'=>0,'bills'=>0,'pending'=>0,'submitted'=>0,'paid'=>0,'amount'=>0,'paid_amount'=>0];
 try {
