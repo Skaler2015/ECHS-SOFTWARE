@@ -123,6 +123,10 @@ if(localStorage.getItem('sidebar')==='collapsed')document.body.classList.add('sb
     <div class="app-main">
         <header class="topbar">
             <button class="icon-btn menu-btn" onclick="toggleSidebar()" aria-label="Menu"><?= icon('menu') ?></button>
+            <div class="scheme-switch" title="Portal switch karein">
+                <a class="ss-opt <?= $scheme==='RGHS'?'on':'' ?>" href="<?= BASE_URL ?>/dashboard.php?scheme=RGHS">RGHS</a>
+                <a class="ss-opt <?= $scheme==='ECHS'?'on':'' ?>" href="<?= BASE_URL ?>/echs.php">ECHS</a>
+            </div>
             <form class="topsearch" method="get" action="<?= $searchAction ?>" role="search">
                 <input type="hidden" name="scheme" value="<?= $scheme ?>">
                 <?= icon('search',18) ?>

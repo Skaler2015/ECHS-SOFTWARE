@@ -410,3 +410,10 @@ body.dark .kpi-ic.o{background:#241d0e}body.dark .kpi-ic.v{background:#1b1530}
     .rpt-grp{width:100%;padding:6px 4px 2px}
     .rpt-link{flex:0 0 auto}
 }
+
+/* ---- portal (scheme) switch toggle ---- */
+.scheme-switch{display:inline-flex;background:var(--brand);border-radius:999px;padding:3px;gap:2px;flex:0 0 auto}
+.scheme-switch .ss-opt{padding:6px 14px;border-radius:999px;color:rgba(255,255,255,.72);font-size:.82rem;font-weight:700;text-decoration:none;transition:.14s;white-space:nowrap}
+.scheme-switch .ss-opt:hover{color:#fff}
+.scheme-switch .ss-opt.on{background:var(--gold);color:#0F1E3D}
+@media(max-width:560px){ .scheme-switch{display:none} }
