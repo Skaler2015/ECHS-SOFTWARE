@@ -8,7 +8,7 @@ header('Content-Type: image/png');
 header('Cache-Control: public, max-age=604800');
 
 $im = imagecreatetruecolor($s, $s);
-$bg = imagecolorallocate($im, 13, 110, 253);   // brand blue
+$bg = imagecolorallocate($im, 15, 30, 61);     // navy (matches ECHS tracker)
 $fg = imagecolorallocate($im, 255, 255, 255);
 imagefilledrectangle($im, 0, 0, $s, $s, $bg);
 

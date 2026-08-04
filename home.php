@@ -78,19 +78,19 @@ function scheme_counts($scheme) {
     } catch (Exception $e) {}
     ?>
     <div class="scheme-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:18px">
-        <div class="scheme-tile" style="--tile:#2563EB;cursor:default">
+        <div class="scheme-tile" style="--tile:#1B2F5E;cursor:default">
             <div class="scheme-tile-title" style="font-size:1.4rem"><?= number_format($grandClaims) ?></div>
             <div class="scheme-tile-name">Total claims (dono)</div>
         </div>
-        <div class="scheme-tile" style="--tile:#7c3aed;cursor:default">
+        <div class="scheme-tile" style="--tile:#C9A227;cursor:default">
             <div class="scheme-tile-title" style="font-size:1.2rem"><?= money($grandAmount) ?></div>
             <div class="scheme-tile-name">Total claimed</div>
         </div>
-        <div class="scheme-tile" style="--tile:#16A34A;cursor:default">
+        <div class="scheme-tile" style="--tile:#2E7D4F;cursor:default">
             <div class="scheme-tile-title" style="font-size:1.2rem"><?= money($rReceived) ?></div>
             <div class="scheme-tile-name">RGHS received</div>
         </div>
-        <div class="scheme-tile" style="--tile:#DC2626;cursor:default">
+        <div class="scheme-tile" style="--tile:#B52525;cursor:default">
             <div class="scheme-tile-title" style="font-size:1.2rem"><?= money($rOutstanding) ?></div>
             <div class="scheme-tile-name">RGHS outstanding</div>
         </div>

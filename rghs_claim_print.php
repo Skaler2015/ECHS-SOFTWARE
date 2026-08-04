@@ -28,7 +28,7 @@ td.k{width:32%;color:#555;background:#fafafa}
 .amt{text-align:right}
 .foot{margin-top:24px;color:#777;font-size:11px;text-align:center;border-top:1px solid #ccc;padding-top:8px}
 @media print{ .noprint{display:none} body{padding:6px} }
-.btn{display:inline-block;padding:8px 16px;background:#2563EB;color:#fff;border:none;border-radius:6px;text-decoration:none;cursor:pointer}
+.btn{display:inline-block;padding:8px 16px;background:#1B2F5E;color:#fff;border:none;border-radius:6px;text-decoration:none;cursor:pointer}
 </style>
 </head>
 <body>

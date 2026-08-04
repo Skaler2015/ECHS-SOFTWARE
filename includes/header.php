@@ -90,7 +90,7 @@ if ($scheme === 'ECHS') {
     <?php $cssv = @filemtime(__DIR__ . '/../assets/css/style.css') ?: APP_VERSION; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=<?= $cssv ?>">
     <link rel="manifest" href="<?= BASE_URL ?>/manifest.webmanifest">
-    <meta name="theme-color" content="#2563EB">
+    <meta name="theme-color" content="#0F1E3D">
     <link rel="apple-touch-icon" href="<?= BASE_URL ?>/assets/icon.php?s=192">
     <style>:root{ --scheme-color: <?= e($meta['color']) ?>; }</style>
 </head>
