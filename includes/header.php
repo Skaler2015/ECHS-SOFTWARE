@@ -26,8 +26,12 @@ if ($scheme === 'ECHS') {
             ['k'=>'tasks','t'=>'Tasks','i'=>'checks','u'=>BASE_URL.'/echs_tasks.php?scheme=ECHS'],
             ['k'=>'doctors','t'=>'Doctors','i'=>'patients','u'=>BASE_URL.'/echs_doctors.php?scheme=ECHS'],
         ]],
+        ['grp' => 'Lookup', 'items' => [
+            ['k'=>'cardhistory','t'=>'Card History','i'=>'search','u'=>BASE_URL.'/echs_card.php?scheme=ECHS'],
+            ['k'=>'patientsearch','t'=>'Patient Search','i'=>'patients','u'=>BASE_URL.'/echs_patient.php?scheme=ECHS'],
+        ]],
         ['grp' => 'Data', 'items' => [
-            ['k'=>'reports','t'=>'Reports','i'=>'chart','u'=>BASE_URL.'/echs_reports.php?scheme=ECHS'],
+            ['k'=>'reports','t'=>'Reports Center','i'=>'chart','u'=>BASE_URL.'/echs_reports.php?scheme=ECHS'],
             ['k'=>'upload','t'=>'Upload Excel','i'=>'upload','u'=>BASE_URL.'/echs_upload.php?scheme=ECHS'],
             ['k'=>'manage','t'=>'Manage','i'=>'database','u'=>BASE_URL.'/echs_manage.php?scheme=ECHS'],
         ]],
