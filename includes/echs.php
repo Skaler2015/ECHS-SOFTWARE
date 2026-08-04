@@ -42,6 +42,13 @@ function echs_ensure_table() {
         'processed_on_raw'=> "VARCHAR(20) NULL",
         'nmi_date'        => "DATE NULL",
         'nmi_remarks'     => "TEXT NULL",
+        'settlement_id'   => "VARCHAR(30) NULL",
+        'settle_date'     => "DATE NULL",
+        'echs_disc'       => "DECIMAL(14,2) NOT NULL DEFAULT 0",
+        'tds_amt'         => "DECIMAL(14,2) NOT NULL DEFAULT 0",
+        'bpa_fees'        => "DECIMAL(14,2) NOT NULL DEFAULT 0",
+        'recovery_amt'    => "DECIMAL(14,2) NOT NULL DEFAULT 0",
+        'amt_credited'    => "DECIMAL(14,2) NOT NULL DEFAULT 0",
         'notes'           => "TEXT NULL",
         'followup'        => "TINYINT(1) NOT NULL DEFAULT 0",
         'first_seen'      => "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
@@ -244,6 +251,13 @@ function echs_import_xls($path, $original_name, array &$prev, array &$history) {
     $rows = $xls->rows();
     if (!$rows) { $res['error'] = 'File khali hai.'; return $res; }
 
+    // ---- auto-detect report type ----
+    $head10 = '';
+    foreach (array_slice($rows, 0, 12) as $rr) { $head10 .= ' ' . implode(' ', array_map('strval', $rr)); }
+    if (stripos($head10, 'NeedMoreInfo') !== false || stripos($head10, 'Latest User Remarks') !== false) {
+        return echs_import_nmi_rows($rows, $original_name, $prev, $history);
+    }
+
     $title = ''; $headerRow = -1;
     foreach ($rows as $i => $r) {
         if ($title === '' && stripos(implode(' ', array_map('strval', $r)), 'as on') !== false) {
@@ -330,7 +344,121 @@ function echs_import_xls($path, $original_name, array &$prev, array &$history) {
     return $res;
 }
 
-/** Import many uploaded files (.xls or .zip). Returns summary. */
+/** Import a NeedMoreInfo Report (.xls): adds NMI date + portal remarks to claims. */
+function echs_import_nmi_rows(array $rows, $original_name, array &$prev, array &$history) {
+    echs_ensure_table();
+    $res = ['ok'=>false,'status'=>'NeedMoreInfo Report','read'=>0,'inserted'=>0,'updated'=>0,'error'=>''];
+    $hr = -1;
+    foreach ($rows as $i => $r) {
+        $j = strtolower(implode(' ', array_map('strval', $r)));
+        if (strpos($j, 'claim id') !== false && strpos($j, 'remarks') !== false) { $hr = $i; break; }
+    }
+    if ($hr < 0) { $res['error'] = 'NeedMoreInfo header nahi mila.'; return $res; }
+    $map = [];
+    foreach ($rows[$hr] as $c => $h) { $map[strtolower(trim(preg_replace('/[^a-z0-9]+/i',' ',(string)$h)))] = $c; }
+    $col = function($names) use ($map) { foreach ((array)$names as $n){ $k=strtolower(trim($n)); if(isset($map[$k]))return $map[$k]; } return null; };
+    $cClaim=$col('claim id'); $cRegion=$col('echs region'); $cHosp=$col('hospital name');
+    $cIO=$col('i o'); $cCard=$col('card id'); $cBen=$col('beneficiary name');
+    $cPat=$col('patient name'); $cAmt=$col('claim amount'); $cNmiDate=$col('nmi date'); $cRem=$col(['latest user remarks','remarks']);
+    if ($cClaim === null) { $res['error']='Claim Id column nahi mila (NMI).'; return $res; }
+
+    $pdo = db();
+    $sql = "INSERT INTO echs_claims (claim_id,region,hospital_name,card_id,esm_name,patient_name,patient_type,net_claim_amt,status,status_code,nmi_date,nmi_remarks,updated_at)
+        VALUES (?,?,?,?,?,?,?,?, 'Need More Information [Portal]','NMI', ?, ?, NOW())
+        ON DUPLICATE KEY UPDATE
+          nmi_date=VALUES(nmi_date), nmi_remarks=VALUES(nmi_remarks),
+          region=IF(region IS NULL OR region='',VALUES(region),region),
+          hospital_name=IF(hospital_name IS NULL OR hospital_name='',VALUES(hospital_name),hospital_name),
+          card_id=IF(card_id IS NULL OR card_id='',VALUES(card_id),card_id),
+          esm_name=IF(esm_name IS NULL OR esm_name='',VALUES(esm_name),esm_name),
+          patient_name=IF(patient_name IS NULL OR patient_name='',VALUES(patient_name),patient_name),
+          patient_type=IF(patient_type IS NULL OR patient_type='',VALUES(patient_type),patient_type),
+          net_claim_amt=IF(net_claim_amt=0,VALUES(net_claim_amt),net_claim_amt),
+          updated_at=NOW()";
+    $stmt = $pdo->prepare($sql);
+    $pdo->beginTransaction();
+    foreach ($rows as $i => $r) {
+        if ($i <= $hr) continue;
+        $claim = trim((string)($r[$cClaim] ?? ''));
+        if (!preg_match('/^\d{3,}$/', $claim)) continue;
+        $res['read']++;
+        $nd = $cNmiDate!==null ? trim((string)$r[$cNmiDate]) : '';
+        $ndYmd = ($nd!=='' && ($ts=strtotime($nd))) ? date('Y-m-d',$ts) : null;
+        $stmt->execute([
+            $claim,
+            $cRegion!==null?trim((string)$r[$cRegion]):null,
+            $cHosp!==null?trim((string)$r[$cHosp]):null,
+            $cCard!==null?trim((string)$r[$cCard]):null,
+            $cBen!==null?trim((string)$r[$cBen]):null,
+            $cPat!==null?trim((string)$r[$cPat]):null,
+            $cIO!==null?trim((string)$r[$cIO]):null,
+            $cAmt!==null?echs_amount($r[$cAmt]):0,
+            $ndYmd,
+            $cRem!==null?trim((string)$r[$cRem]):null,
+        ]);
+        if (array_key_exists($claim,$prev)) $res['updated']++; else { $res['inserted']++; $prev[$claim]='Need More Information [Portal]'; }
+    }
+    $pdo->commit();
+    $res['ok']=true;
+    return $res;
+}
+
+/** Import a Claim Settlement Report (.pdf): per-claim credited amount, TDS, BPA fees, settlement id/date. */
+function echs_import_settlement_pdf($path, $original_name, array &$prev, array &$history) {
+    echs_ensure_table();
+    $res = ['ok'=>false,'status'=>'Claim Settlement Report','read'=>0,'inserted'=>0,'updated'=>0,'error'=>''];
+    $autoload = __DIR__ . '/../lib/pdf/autoload.php';
+    if (!is_file($autoload)) { $res['error']='PDF library nahi mili (lib/pdf).'; return $res; }
+    require_once $autoload;
+    try {
+        $text = (new \Smalot\PdfParser\Parser())->parseFile($path)->getText();
+    } catch (Exception $e) { $res['error']='PDF padhi nahi ja saki: '.$e->getMessage(); return $res; }
+    if (!$text) { $res['error']='PDF khali/scanned lag rahi hai.'; return $res; }
+
+    $lines = preg_split('/\R/', $text);
+    $sid = '';
+    $pdo = db();
+    $sql = "INSERT INTO echs_claims (claim_id,settlement_id,settle_date,processed_on,processed_on_raw,accept_date,accept_date_raw,net_claim_amt,approved_amt,echs_disc,tds_amt,bpa_fees,recovery_amt,amt_credited,status,status_code,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'Claim Settled','SETTLE', NOW())
+        ON DUPLICATE KEY UPDATE
+          settlement_id=VALUES(settlement_id), settle_date=VALUES(settle_date),
+          echs_disc=VALUES(echs_disc), tds_amt=VALUES(tds_amt), bpa_fees=VALUES(bpa_fees),
+          recovery_amt=VALUES(recovery_amt), amt_credited=VALUES(amt_credited),
+          approved_amt=VALUES(approved_amt),
+          net_claim_amt=IF(net_claim_amt=0,VALUES(net_claim_amt),net_claim_amt),
+          processed_on=IF(processed_on IS NULL,VALUES(processed_on),processed_on),
+          processed_on_raw=IF(processed_on_raw IS NULL OR processed_on_raw='',VALUES(processed_on_raw),processed_on_raw),
+          accept_date=IF(accept_date IS NULL,VALUES(accept_date),accept_date),
+          accept_date_raw=IF(accept_date_raw IS NULL OR accept_date_raw='',VALUES(accept_date_raw),accept_date_raw),
+          status='Claim Settled', status_code='SETTLE', updated_at=NOW()";
+    $stmt = $pdo->prepare($sql);
+    $pdo->beginTransaction();
+    foreach ($lines as $ln) {
+        $ln = trim($ln);
+        if (preg_match('/Settlement ID\s*:\s*(\d+)/i', $ln, $m)) { $sid = $m[1]; continue; }
+        if (preg_match('/^(\d{2}-\d{2}-\d{4})\s+(\d{7,9})(\d{2}-\d{2}-\d{4})\s+(.+)$/', $ln, $m)) {
+            $settleRaw = $m[1]; $claim = $m[2]; $acceptRaw = $m[3];
+            preg_match_all('/\d+\.\d{2}/', $m[4], $am);
+            $amts = $am[0];
+            if (count($amts) < 7) continue;
+            [$claimAmt,$appAmt,$disc,$tds,$bpa,$recov,$credit] = array_slice($amts, 0, 7);
+            $res['read']++;
+            $sd = DateTime::createFromFormat('d-m-Y', $settleRaw); $settleYmd = $sd?$sd->format('Y-m-d'):null;
+            $ad = DateTime::createFromFormat('d-m-Y', $acceptRaw); $acceptYmd = $ad?$ad->format('Y-m-d'):null;
+            $wasSettled = isset($prev[$claim]) && stripos($prev[$claim],'settled')!==false;
+            $stmt->execute([$claim,$sid,$settleYmd,$settleYmd,$settleRaw,$acceptYmd,$acceptRaw,
+                (float)$claimAmt,(float)$appAmt,(float)$disc,(float)$tds,(float)$bpa,(float)$recov,(float)$credit]);
+            if (array_key_exists($claim,$prev)) { $res['updated']++; if(!$wasSettled) $history[]=[$claim,$prev[$claim],'Claim Settled']; }
+            else { $res['inserted']++; $history[]=[$claim,null,'Claim Settled']; }
+            $prev[$claim] = 'Claim Settled';
+        }
+    }
+    $pdo->commit();
+    $res['ok'] = true;
+    return $res;
+}
+
+/** Import many uploaded files (.xls / .zip / .pdf). Returns summary. */
 function echs_import_uploads(array $files) {
     echs_ensure_table();
     $pdo = db();
@@ -366,8 +494,11 @@ function echs_import_uploads(array $files) {
             }
         } elseif ($ext === 'xls' || $ext === 'xlsx') {
             _echs_one($tmp, $name, $prev, $history, $summary);
+        } elseif ($ext === 'pdf') {
+            $r = echs_import_settlement_pdf($tmp, $name, $prev, $history);
+            _echs_merge($r, $name, $summary);
         } else {
-            $summary['errors'][] = "$name: sirf .xls ya .zip allowed hain.";
+            $summary['errors'][] = "$name: sirf .xls, .zip ya .pdf allowed hain.";
         }
     }
 
@@ -384,12 +515,15 @@ function echs_import_uploads(array $files) {
 
 function _echs_one($path, $name, array &$prev, array &$history, array &$summary) {
     $r = echs_import_xls($path, $name, $prev, $history);
+    _echs_merge($r, $name, $summary);
+}
+
+function _echs_merge(array $r, $name, array &$summary) {
     if ($r['ok']) {
         $summary['files'][] = ['name'=>$name,'status'=>$r['status'],'read'=>$r['read'],'inserted'=>$r['inserted'],'updated'=>$r['updated']];
         $summary['read'] += $r['read'];
         $summary['inserted'] += $r['inserted'];
         $summary['updated'] += $r['updated'];
-        // log
         try {
             db()->prepare("INSERT INTO echs_uploads (filename,status,rows_read,inserted,updated) VALUES (?,?,?,?,?)")
                 ->execute([$name, $r['status'], $r['read'], $r['inserted'], $r['updated']]);

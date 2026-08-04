@@ -105,6 +105,13 @@ require __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<?php if (!empty($c['nmi_remarks'])): ?>
+<div class="nmi-box">
+    <div class="muted small">📝 Portal Query (Need More Information)<?= !empty($c['nmi_date'])?' · '.fdate($c['nmi_date']):'' ?></div>
+    <div class="nmi-q"><?= e($c['nmi_remarks']) ?></div>
+</div>
+<?php endif; ?>
+
 <div class="detail-grid">
     <div class="card">
         <h2>Claim Details</h2>
@@ -120,8 +127,20 @@ require __DIR__ . '/includes/header.php';
             <tr><td>Net Claim Amt</td><th><?= money($c['net_claim_amt']) ?></th></tr>
             <tr><td>Approved Amt</td><th><?= money($c['approved_amt']) ?></th></tr>
             <tr><td>Deduction</td><th><?= money($c['net_claim_amt'] - $c['approved_amt']) ?></th></tr>
-            <tr><td>Received</td><th><?= money($paySum) ?></th></tr>
+            <tr><td>Received (manual)</td><th><?= money($paySum) ?></th></tr>
         </table>
+        <?php if (!empty($c['settlement_id']) || (float)($c['amt_credited'] ?? 0) > 0): ?>
+        <h2 style="margin-top:16px">💳 Settlement Details</h2>
+        <table class="kv">
+            <tr><td>Settlement ID</td><th><?= e($c['settlement_id'] ?: '-') ?></th></tr>
+            <tr><td>Settlement Date</td><th><?= fdate($c['settle_date']) ?></th></tr>
+            <tr><td>ECHS Discount</td><th><?= money($c['echs_disc']) ?></th></tr>
+            <tr><td>TDS Amount</td><th><?= money($c['tds_amt']) ?></th></tr>
+            <tr><td>BPA Fees</td><th><?= money($c['bpa_fees']) ?></th></tr>
+            <tr><td>Recovery</td><th><?= money($c['recovery_amt']) ?></th></tr>
+            <tr><td><strong>Amt Credited</strong></td><th><strong style="color:#16A34A"><?= money($c['amt_credited']) ?></strong></th></tr>
+        </table>
+        <?php endif; ?>
     </div>
 
     <div class="card">

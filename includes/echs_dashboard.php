@@ -64,6 +64,8 @@ $recv    = (float)db()->query("SELECT COALESCE(SUM(amount),0) s FROM echs_paymen
 $settled = db()->query("SELECT COUNT(*) n, COALESCE(SUM(net_claim_amt),0) net, COALESCE(SUM(approved_amt),0) app FROM echs_claims WHERE status LIKE '%Settled%'")->fetch();
 $deduction = (float)$settled['net'] - (float)$settled['app'];
 $actionN = (int)db()->query("SELECT COUNT(*) n FROM echs_claims WHERE followup=1 OR status LIKE '%Need More Information%'")->fetch()['n'];
+$credited = (float)db()->query("SELECT COALESCE(SUM(amt_credited),0) s FROM echs_claims")->fetch()['s'];
+$tdsTotal = (float)db()->query("SELECT COALESCE(SUM(tds_amt),0) s FROM echs_claims")->fetch()['s'];
 
 /* ---------- monthly series (last 12) ---------- */
 $ma = db()->query("SELECT DATE_FORMAT(accept_date,'%Y-%m') ym, COUNT(*) n, COALESCE(SUM(net_claim_amt),0) net
@@ -176,13 +178,14 @@ require __DIR__ . '/header.php';
     <div class="card-head"><h2>💰 Financial Snapshot</h2><a href="<?= BASE_URL ?>/echs_payments.php?scheme=ECHS">Payments →</a></div>
     <div class="fin-row">
         <div class="fin"><div class="fin-lbl">Approved (Settled)</div><div class="fin-num ok"><?= money($settled['app']) ?></div></div>
-        <div class="fin-op">−</div>
-        <div class="fin"><div class="fin-lbl">Received</div><div class="fin-num"><?= money($recv) ?></div></div>
-        <div class="fin-op">=</div>
-        <div class="fin"><div class="fin-lbl">Balance baaki</div><div class="fin-num <?= ($settled['app']-$recv)>0?'warn':'ok' ?>"><?= money($settled['app']-$recv) ?></div></div>
+        <div class="fin-op">|</div>
+        <div class="fin"><div class="fin-lbl">Amt Credited (settlements)</div><div class="fin-num ok"><?= money($credited) ?></div></div>
+        <div class="fin-op">|</div>
+        <div class="fin"><div class="fin-lbl">TDS deducted</div><div class="fin-num warn"><?= money($tdsTotal) ?></div></div>
         <div class="fin-op">|</div>
         <div class="fin"><div class="fin-lbl">Total Deduction</div><div class="fin-num danger"><?= money($deduction) ?></div></div>
     </div>
+    <p class="muted small" style="margin-top:8px">Amt Credited = Settlement PDF se asli bank credit · TDS = kati hui tax · manual payments: <?= money($recv) ?></p>
 </div>
 
 <!-- Charts -->

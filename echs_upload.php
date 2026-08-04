@@ -51,8 +51,8 @@ require __DIR__ . '/includes/header.php';
         <?= csrf_field() ?>
         <div class="upload-drop" id="dropZone">
             <div style="font-size:2rem">📎</div>
-            <label for="claimfiles"><strong>Files yahan khींchकर chhodें</strong> — ya click karके chunें (.xls / .zip)</label>
-            <input type="file" name="claimfiles[]" id="claimfiles" multiple accept=".xls,.zip" style="margin-top:10px">
+            <label for="claimfiles"><strong>Files yahan khींchकर chhodें</strong> — ya click karके chunें (.xls / .zip / .pdf)</label>
+            <input type="file" name="claimfiles[]" id="claimfiles" multiple accept=".xls,.zip,.pdf" style="margin-top:10px">
             <div id="fileList" class="filelist"></div>
         </div>
         <div class="form-actions">
@@ -121,10 +121,25 @@ require __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <div class="card">
-    <h3>ℹ️ Kaunsi files upload kar sakte hain?</h3>
-    <p class="muted small">Portal se milne wali koi bhi CLAIMLIST file — jaise:
-    Review By Validator, Claim Settled, Patient Referral, Need More Information,
-    Rejected Claims, Cancel Claim, Admission Intimation, aur stage codes (1P, 2S, 3P, 5S, 6S, 7S, 13P) — sab support hain.</p>
+    <h3>ℹ️ Kaunsi reports upload kar sakte hain? (software khud pehchaan leta hai)</h3>
+    <div class="grid3">
+        <div class="report-type">
+            <div class="rt-ic" style="background:#eff6ff;color:#2563EB">📋</div>
+            <strong>CLAIMLIST (.xls / .zip)</strong>
+            <p class="muted small">Review by Validator, Claim Settled, Patient Referral, Rejected, Cancel, stage codes (1P/2S/6S/13P…) — sab.</p>
+        </div>
+        <div class="report-type">
+            <div class="rt-ic" style="background:#fffbeb;color:#B45309">📝</div>
+            <strong>NeedMoreInfo Report (.xls)</strong>
+            <p class="muted small">Har claim par portal ka <strong>query/remark</strong> (kya document chahiye) + NMI date.</p>
+        </div>
+        <div class="report-type">
+            <div class="rt-ic" style="background:#ecfdf5;color:#16A34A">💳</div>
+            <strong>Claim Settlement Report (.pdf)</strong>
+            <p class="muted small">Har claim ka <strong>asli mila paisa</strong> (Amt Credited), TDS, BPA fees, ECHS discount, Settlement ID/Date.</p>
+        </div>
+    </div>
+    <p class="muted small" style="margin-top:10px">Ek saath teeno tarah ki files (ya poori ZIP) daal sakte hain — software har file ko pehchaanकर sahi jagah update kar deta hai.</p>
 </div>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
