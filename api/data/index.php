@@ -49,6 +49,15 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_kv` (
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+// daily backup snapshots (one row per key per day, kept for safety/restore)
+$pdo->exec("CREATE TABLE IF NOT EXISTS `echs_kv_backup` (
+    `kkey` VARCHAR(80) NOT NULL,
+    `snap_date` DATE NOT NULL,
+    `kval` LONGTEXT NULL,
+    `saved_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`kkey`,`snap_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 switch ($method) {
@@ -64,9 +73,31 @@ switch ($method) {
     case 'PUT':
         $body = file_get_contents('php://input');
         if ($body === false) $body = '';
+
+        // read current value first (to detect real changes)
+        $cur = $pdo->prepare("SELECT kval FROM echs_kv WHERE kkey = ?");
+        $cur->execute([$key]);
+        $old = $cur->fetch();
+        $changed = !$old || (string)$old['kval'] !== $body;
+
+        // save live value
         $st = $pdo->prepare("INSERT INTO echs_kv (kkey, kval) VALUES (?, ?)
             ON DUPLICATE KEY UPDATE kval = VALUES(kval)");
         $st->execute([$key, $body]);
+
+        // automatic safety net: keep one snapshot per key per day for 30 days,
+        // so real data can always be recovered even after a bad change.
+        if ($changed && $body !== '') {
+            try {
+                $bk = $pdo->prepare("INSERT INTO echs_kv_backup (kkey, snap_date, kval)
+                    VALUES (?, CURDATE(), ?)
+                    ON DUPLICATE KEY UPDATE kval = VALUES(kval), saved_at = NOW()");
+                $bk->execute([$key, $body]);
+                $pdo->prepare("DELETE FROM echs_kv_backup WHERE kkey = ? AND snap_date < (CURDATE() - INTERVAL 30 DAY)")
+                    ->execute([$key]);
+            } catch (Exception $e) { /* backup is best-effort, never block a save */ }
+        }
+
         echo json_encode(['success' => true, 'bytes' => strlen($body)]);
         break;
 

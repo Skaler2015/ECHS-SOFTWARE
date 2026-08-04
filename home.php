@@ -83,6 +83,7 @@ function scheme_counts($scheme) {
 
     <div class="home-links">
         <a href="<?= BASE_URL ?>/settings.php">⚙️ Settings</a>
+        <a href="<?= BASE_URL ?>/echs_restore.php">🛡️ ECHS Data Safety &amp; Backup</a>
     </div>
 </main>
 <footer class="footer">© <?= date('Y') ?> <?= e(APP_NAME) ?> · <?= e(APP_OWNER) ?></footer>
