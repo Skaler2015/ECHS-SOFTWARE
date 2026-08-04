@@ -1,0 +1,16 @@
+{
+  "id": "noble-rghs",
+  "name": "Noble RGHS Claims",
+  "short_name": "RGHS",
+  "description": "RGHS claims tracker — Noble Care Hospital",
+  "start_url": "dashboard.php?scheme=RGHS",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0F1E3D",
+  "theme_color": "#0F1E3D",
+  "icons": [
+    { "src": "assets/icon.php?s=192&c=rghs", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon.php?s=512&c=rghs", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

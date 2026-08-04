@@ -92,9 +92,15 @@ if ($scheme === 'ECHS') {
     <title><?= e($page_title) ?> · <?= e(APP_NAME) ?></title>
     <?php $cssv = @filemtime(__DIR__ . '/../assets/css/style.css') ?: APP_VERSION; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=<?= $cssv ?>">
-    <link rel="manifest" href="<?= BASE_URL ?>/manifest.webmanifest">
+    <?php $mf = $scheme === 'ECHS' ? 'manifest-echs.webmanifest' : 'manifest-rghs.webmanifest';
+          $ic = $scheme === 'ECHS' ? 'echs' : 'rghs'; ?>
+    <link rel="manifest" href="<?= BASE_URL ?>/<?= $mf ?>">
     <meta name="theme-color" content="#0F1E3D">
-    <link rel="apple-touch-icon" href="<?= BASE_URL ?>/assets/icon.php?s=192">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="<?= $scheme==='ECHS'?'ECHS':'RGHS' ?>">
+    <link rel="apple-touch-icon" href="<?= BASE_URL ?>/assets/icon.php?s=192&c=<?= $ic ?>">
     <style>:root{ --scheme-color: <?= e($meta['color']) ?>; }</style>
 </head>
 <body>

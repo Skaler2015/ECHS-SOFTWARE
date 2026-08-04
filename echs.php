@@ -24,6 +24,23 @@ header('Cache-Control: no-store, must-revalidate');
 
 $htmlOut = file_get_contents($file);
 
+// ---- Make ECHS installable as its own mobile app (PWA) ----
+// app.html doesn't go through our PHP shell, so inject the manifest + icons here.
+$pwaHead = '<link rel="manifest" href="' . BASE_URL . '/manifest-echs.webmanifest">'
+    . '<meta name="theme-color" content="#0F1E3D">'
+    . '<meta name="mobile-web-app-capable" content="yes">'
+    . '<meta name="apple-mobile-web-app-capable" content="yes">'
+    . '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'
+    . '<meta name="apple-mobile-web-app-title" content="ECHS">'
+    . '<link rel="apple-touch-icon" href="' . BASE_URL . '/assets/icon.php?s=192&c=echs">';
+$hp = stripos($htmlOut, '</head>');
+if ($hp !== false) {
+    $htmlOut = substr($htmlOut, 0, $hp) . $pwaHead . substr($htmlOut, $hp);
+}
+// register the service worker (same one the rest of the app uses)
+$pwaSw = '<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("'
+    . BASE_URL . '/sw.js").catch(function(){});}</script>';
+
 // Inject a small floating scheme-switcher so users can jump to RGHS / Home
 // without leaving the tracker. Self-contained (the tracker doesn't load our CSS).
 $rghsUrl = BASE_URL . '/dashboard.php?scheme=RGHS';
@@ -37,8 +54,8 @@ $switch = '<div id="nobleSwitch" style="position:fixed;bottom:16px;right:16px;z-
 // insert before the LAST </body> (earlier ones may live inside JS strings)
 $pos = strripos($htmlOut, '</body>');
 if ($pos !== false) {
-    $htmlOut = substr($htmlOut, 0, $pos) . $switch . substr($htmlOut, $pos);
+    $htmlOut = substr($htmlOut, 0, $pos) . $switch . $pwaSw . substr($htmlOut, $pos);
 } else {
-    $htmlOut .= $switch;
+    $htmlOut .= $switch . $pwaSw;
 }
 echo $htmlOut;

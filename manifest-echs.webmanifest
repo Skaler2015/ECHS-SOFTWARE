@@ -1,0 +1,16 @@
+{
+  "id": "noble-echs",
+  "name": "Noble ECHS Tracker",
+  "short_name": "ECHS",
+  "description": "ECHS claims tracker — Noble Care Hospital",
+  "start_url": "echs.php",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0F1E3D",
+  "theme_color": "#0F1E3D",
+  "icons": [
+    { "src": "assets/icon.php?s=192&c=echs", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon.php?s=512&c=echs", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
