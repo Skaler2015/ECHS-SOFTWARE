@@ -42,6 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $hist = $pdo->prepare("SELECT * FROM rghs_claim_history WHERE tid=? ORDER BY changed_at DESC");
 $hist->execute([$tid]); $history = $hist->fetchAll();
 
+// payment record (from Payment Tracker upload), if any
+$pst = $pdo->prepare("SELECT * FROM rghs_payments WHERE tid=?");
+$pst->execute([$tid]); $pay = $pst->fetch() ?: null;
+
 // other claims of same enrollment/card
 $more = [];
 if (!empty($c['enrollment_id'])) {
@@ -92,6 +96,26 @@ require __DIR__ . '/includes/header.php';
         </table>
     </div>
 </div>
+
+<?php if ($pay): $psuccess = stripos((string)$pay['final_status'],'success')!==false; ?>
+<div class="card">
+    <h2>💰 Payment <span class="pill pill-<?= $psuccess?'settled':'process' ?>" style="margin-left:8px"><?= e($pay['final_status'] ?: '-') ?></span></h2>
+    <div class="detail-grid">
+        <table class="kv">
+            <tr><td>Paid amount</td><th class="ok"><?= money($pay['paid_amount']) ?></th></tr>
+            <tr><td>TDS deducted</td><th><?= money($pay['tds_deducted']) ?></th></tr>
+            <tr><td>Payment credit date</td><th><?= fdate($pay['credit_date']) ?></th></tr>
+            <tr><td>Payment initiated</td><th><?= fdate($pay['init_date']) ?></th></tr>
+        </table>
+        <table class="kv">
+            <tr><td>UTR number</td><th><?= e($pay['utr']) ?></th></tr>
+            <tr><td>Treasury voucher</td><th><?= e($pay['treasury_voucher']) ?></th></tr>
+            <tr><td>Bank</td><th><?= e($pay['bank_name']) ?> <span class="muted"><?= e($pay['ifsc']) ?></span></th></tr>
+            <tr><td>Account no.</td><th><?= e($pay['account_no']) ?></th></tr>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if (!empty($c['tpa_remarks']) || !empty($c['cu_remarks']) || !empty($c['last_query_remark'])): ?>
 <div class="card">

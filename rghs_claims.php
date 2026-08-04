@@ -31,7 +31,7 @@ $totCount = (int)$agg['n'];
 $pages = max(1, (int)ceil($totCount / $per));
 
 $sql = "SELECT tid, patient_name, card_no, claim_type, status, hospital_name, doctor_name,
-        submit_date, claim_amt, cu_amt, sub_year, sub_month
+        submit_date, claim_amt, cu_amt, sub_year, sub_month, paid_amount, payment_status
         FROM rghs_claims $where ORDER BY `$orderCol` $dir, tid $dir LIMIT $per OFFSET $offset";
 $st = $pdo->prepare($sql); $st->execute($args);
 $rows = $st->fetchAll();
@@ -84,6 +84,12 @@ require __DIR__ . '/includes/header.php';
         <?php endforeach; ?>
     </select>
     <input type="text" name="year" value="<?= e($_GET['year'] ?? '') ?>" placeholder="Year" style="width:80px">
+    <select name="pay">
+        <option value="">Payment: sab</option>
+        <option value="paid" <?= ($_GET['pay']??'')==='paid'?'selected':'' ?>>Paid ✓</option>
+        <option value="process" <?= ($_GET['pay']??'')==='process'?'selected':'' ?>>In process</option>
+        <option value="unpaid" <?= ($_GET['pay']??'')==='unpaid'?'selected':'' ?>>Unpaid</option>
+    </select>
     <button class="btn btn-primary">Filter</button>
     <?php if (array_diff_key($_GET, ['scheme'=>1,'page'=>1,'sort'=>1,'dir'=>1,'per'=>1])): ?>
         <a class="btn btn-light" href="<?= BASE_URL ?>/rghs_claims.php?scheme=RGHS">Reset</a>
@@ -109,10 +115,11 @@ require __DIR__ . '/includes/header.php';
             <th><?= sortLink('submit_date','Submitted') ?></th>
             <th class="r"><?= sortLink('claim_amt','Claimed') ?></th>
             <th class="r"><?= sortLink('cu_amt','Approved') ?></th>
+            <th class="r"><?= sortLink('paid_amount','Paid') ?></th>
         </tr></thead>
         <tbody>
         <?php if (!$rows): ?>
-            <tr><td colspan="8" class="muted" style="text-align:center;padding:24px">Kuch nahi mila.</td></tr>
+            <tr><td colspan="9" class="muted" style="text-align:center;padding:24px">Kuch nahi mila.</td></tr>
         <?php else: foreach ($rows as $c): ?>
             <tr>
                 <td><a class="link" href="<?= BASE_URL ?>/rghs_claim.php?scheme=RGHS&tid=<?= urlencode($c['tid']) ?>"><?= e($c['tid']) ?></a></td>
@@ -123,6 +130,7 @@ require __DIR__ . '/includes/header.php';
                 <td class="small"><?= $c['submit_date'] ? e(date('d-m-y', strtotime($c['submit_date']))) : '-' ?></td>
                 <td class="r"><?= inr($c['claim_amt'],0) ?></td>
                 <td class="r"><?= inr($c['cu_amt'],0) ?></td>
+                <td class="r"><?php if ($c['paid_amount']>0): ?><span title="<?= e($c['payment_status']) ?>"><?= inr($c['paid_amount'],0) ?></span><?php elseif (stripos((string)$c['payment_status'],'process')!==false): ?><span class="muted small">process</span><?php else: ?><span class="muted">-</span><?php endif; ?></td>
             </tr>
         <?php endforeach; endif; ?>
         </tbody>

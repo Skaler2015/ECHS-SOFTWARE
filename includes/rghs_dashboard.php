@@ -50,6 +50,17 @@ $changes = $pdo->query("SELECT h.tid, h.from_status, h.to_status, h.changed_at, 
     FROM rghs_claim_history h LEFT JOIN rghs_claims c ON c.tid = h.tid COLLATE utf8mb4_unicode_ci
     WHERE h.from_status IS NOT NULL ORDER BY h.changed_at DESC LIMIT 10")->fetchAll();
 
+// payments summary (from Payment Tracker uploads)
+$payAgg = $pdo->query("SELECT
+        COALESCE(SUM(CASE WHEN final_status LIKE '%SUCCESS%' THEN paid_amount ELSE 0 END),0) paid,
+        COALESCE(SUM(CASE WHEN final_status LIKE '%PROCESS%' THEN paid_amount ELSE 0 END),0) inproc,
+        COALESCE(SUM(tds_deducted),0) tds,
+        SUM(final_status LIKE '%SUCCESS%') paidn,
+        SUM(final_status LIKE '%PROCESS%') procn,
+        COUNT(*) total
+    FROM rghs_payments")->fetch();
+$hasPay = ((int)$payAgg['total']) > 0;
+
 $totCat = array_sum($cat) ?: 1;
 $pA = round($cat['approved']/$totCat*100,1);
 $pP = round($cat['pending']/$totCat*100,1);
@@ -77,6 +88,15 @@ require __DIR__ . '/header.php';
     <div class="stat-card warn"><div class="stat-num"><?= number_format($pend['n']) ?></div><div class="stat-lbl">Pending / in-process</div></div>
     <div class="stat-card danger"><div class="stat-num"><?= number_format($cat['rejected']) ?></div><div class="stat-lbl">Rejected</div></div>
 </div>
+
+<?php if ($hasPay): ?>
+<div class="stat-grid">
+    <div class="stat-card ok"><div class="stat-num"><?= inr($payAgg['paid'],0) ?></div><div class="stat-lbl">Paid (received) · <?= number_format($payAgg['paidn']) ?></div></div>
+    <div class="stat-card warn"><div class="stat-num"><?= inr($payAgg['inproc'],0) ?></div><div class="stat-lbl">Payment in-process · <?= number_format($payAgg['procn']) ?></div></div>
+    <div class="stat-card info"><div class="stat-num"><?= inr($payAgg['tds'],0) ?></div><div class="stat-lbl">TDS deducted</div></div>
+    <div class="stat-card"><div class="stat-num"><?= number_format($payAgg['total']) ?></div><div class="stat-lbl">Payment records</div></div>
+</div>
+<?php endif; ?>
 
 <div class="detail-grid">
     <div class="card">

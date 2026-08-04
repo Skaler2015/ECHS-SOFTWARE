@@ -67,6 +67,73 @@ function rghs_field_names() {
     return array_map(function($x){ return $x[0]; }, rghs_fields());
 }
 
+/**
+ * Payment tracker fields (from the RGHS "Hospital Payment Tracker" report).
+ * Linked to claims by tid (= "Transaction Id"). [field, sql_type, [aliases]].
+ */
+function rghs_payment_fields() {
+    static $f = null;
+    if ($f !== null) return $f;
+    $f = [
+        ['tid',               "VARCHAR(40) NOT NULL",             ['Transaction Id','TID']],
+        ['p_sno',             "VARCHAR(16) NULL",                 ['S No.']],
+        ['tid_creation_date', "DATE NULL",                        ['TID Creation Date']],
+        ['claim_submit_date', "DATE NULL",                        ['Claim Submission Date']],
+        ['patient_name',      "VARCHAR(160) NULL",                ['Patient Name']],
+        ['card_no',           "VARCHAR(40) NULL",                 ['RGHS Card No.']],
+        ['account_no',        "VARCHAR(40) NULL",                 ['Account No.']],
+        ['bank_name',         "VARCHAR(120) NULL",                ['Bank Name']],
+        ['paid_amount',       "DECIMAL(14,2) NOT NULL DEFAULT 0", ['Paid Amount(Rs.)','Paid Amount']],
+        ['creation_date',     "DATE NULL",                        ['Payment Creation Date']],
+        ['final_status',      "VARCHAR(40) NULL",                 ['Final Status']],
+        ['ifsc',              "VARCHAR(20) NULL",                 ['IFSC Code']],
+        ['utr',               "VARCHAR(80) NULL",                 ['Response/ UTR Number','UTR Number']],
+        ['hosp_claim_amt',    "DECIMAL(14,2) NOT NULL DEFAULT 0", ['Hospital Claim Amount']],
+        ['tpa_amt',           "DECIMAL(14,2) NOT NULL DEFAULT 0", ['TPA Approved Amount']],
+        ['cu_amt',            "DECIMAL(14,2) NOT NULL DEFAULT 0", ['CU Claim Amount']],
+        ['tds_deducted',      "DECIMAL(14,2) NOT NULL DEFAULT 0", ['TDS Deducted']],
+        ['tpa_remarks',       "TEXT NULL",                        ['TPA Remarks']],
+        ['department',        "VARCHAR(90) NULL",                 ['Department']],
+        ['addl_remark',       "TEXT NULL",                        ['Additional Remark']],
+        ['init_date',         "DATE NULL",                        ['Payment Initiation Date']],
+        ['treasury_voucher',  "VARCHAR(40) NULL",                 ['Treasury Voucher No.']],
+        ['credit_date',       "DATE NULL",                        ['Payment Credit Date']],
+    ];
+    return $f;
+}
+function rghs_payment_field_names() { return array_map(function($x){ return $x[0]; }, rghs_payment_fields()); }
+function rghs_payment_date_fields() { $o=[]; foreach (rghs_payment_fields() as $x) if (stripos($x[1],'DATE')===0) $o[]=$x[0]; return $o; }
+function rghs_payment_amount_fields() { return ['paid_amount','hosp_claim_amt','tpa_amt','cu_amt','tds_deducted']; }
+
+/** Alias map (normalised alias -> field) for both report types, for the JS mapper. */
+function rghs_alias_list($which) {
+    $src = $which === 'payments' ? rghs_payment_fields() : rghs_fields();
+    $out = [];
+    foreach ($src as $x) {
+        $out[] = ['f' => $x[0], 'a' => array_map(function($s){ return strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $s)); }, $x[2])];
+    }
+    return $out;
+}
+
+/** Lenient date parse for payment report (handles time suffix + Excel serials). */
+function rghs_pdate($v) {
+    $v = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', (string)$v);
+    $v = trim($v);
+    if ($v === '' || strcasecmp($v, 'NA') === 0) return null;
+    if (ctype_digit($v)) {                 // Excel date serial
+        $n = (int)$v;
+        if ($n >= 20000 && $n <= 80000) {
+            $d = new DateTime('1899-12-30'); $d->modify("+$n days"); return $d->format('Y-m-d');
+        }
+    }
+    $part = preg_split('/\s+/', $v)[0];     // drop time portion
+    $part = str_replace('/', '-', $part);
+    if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $part, $m)) return sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
+    if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $part, $m)) return sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]);
+    $ts = strtotime($v);
+    return $ts ? date('Y-m-d', $ts) : null;
+}
+
 /** Header aliases normalised -> field name (for the JS mapper / server checks). */
 function rghs_header_map() {
     $m = [];
@@ -106,11 +173,16 @@ function rghs_ensure_table() {
             $pdo->exec("ALTER TABLE `rghs_claims` ADD COLUMN `$name` $type");
         }
     }
-    // bookkeeping columns
+    // bookkeeping + payment rollup columns
     foreach ([
         'doctor_manual' => "TINYINT(1) NOT NULL DEFAULT 0",   // reserved: was doctor set by hand
         'notes'         => "TEXT NULL",
         'followup'      => "TINYINT(1) NOT NULL DEFAULT 0",
+        'paid_amount'   => "DECIMAL(14,2) NOT NULL DEFAULT 0", // rolled up from rghs_payments
+        'payment_status'=> "VARCHAR(40) NULL",
+        'utr'           => "VARCHAR(80) NULL",
+        'payment_date'  => "DATE NULL",
+        'tds_paid'      => "DECIMAL(14,2) NOT NULL DEFAULT 0",
         'first_seen'    => "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
         'updated_at'    => "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
     ] as $name => $def) {
@@ -136,13 +208,50 @@ function rghs_ensure_table() {
     $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_uploads` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `filename` VARCHAR(200) NULL,
+        `kind` VARCHAR(20) NULL,
         `rows_read` INT DEFAULT 0,
         `inserted` INT DEFAULT 0,
         `updated` INT DEFAULT 0,
         `uploaded_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    try { $pdo->exec("ALTER TABLE `rghs_uploads` ADD COLUMN `kind` VARCHAR(20) NULL"); } catch (Exception $e) {}
+
+    // payments (one row per claim = tid), from the Payment Tracker report
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_payments` (
+        `tid` VARCHAR(40) NOT NULL PRIMARY KEY
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $pex = [];
+    foreach ($pdo->query("SHOW COLUMNS FROM `rghs_payments`") as $c) $pex[strtolower($c['Field'])] = true;
+    foreach (rghs_payment_fields() as $x) {
+        [$name, $type] = $x;
+        if ($name === 'tid') continue;
+        if (!isset($pex[strtolower($name)])) $pdo->exec("ALTER TABLE `rghs_payments` ADD COLUMN `$name` $type");
+    }
+    if (!isset($pex['updated_at'])) $pdo->exec("ALTER TABLE `rghs_payments` ADD COLUMN `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+    foreach (['idxp_status'=>'final_status','idxp_credit'=>'credit_date','idxp_card'=>'card_no'] as $idx=>$col) {
+        try { $pdo->exec("ALTER TABLE `rghs_payments` ADD INDEX `$idx` (`$col`)"); } catch (Exception $e) {}
+    }
 
     $done = true;
+}
+
+/**
+ * Roll payment data up onto matching claims (rghs_claims) for a set of tids.
+ * Safe to call with tids that have no claim row — they are simply skipped.
+ */
+function rghs_rollup_payments(array $tids) {
+    if (!$tids) return;
+    $pdo = db();
+    $in = implode(',', array_fill(0, count($tids), '?'));
+    $pdo->prepare("UPDATE rghs_claims c
+        JOIN rghs_payments p ON c.tid = p.tid
+        SET c.paid_amount = p.paid_amount,
+            c.payment_status = p.final_status,
+            c.utr = p.utr,
+            c.payment_date = COALESCE(p.credit_date, p.creation_date),
+            c.tds_paid = p.tds_deducted,
+            c.updated_at = NOW()
+        WHERE c.tid IN ($in)")->execute($tids);
 }
 
 /** Parse dd/mm/yyyy or dd-mm-yyyy (RGHS uses both). Returns Y-m-d or null. */
@@ -211,6 +320,11 @@ function rghs_build_filter(array $g) {
     elseif ($cat === 'rejected') $where[] = "(status LIKE '%REJECT%' OR status LIKE '%Reject%')";
     elseif ($cat === 'query') $where[] = "(status LIKE '%QUER%' OR status LIKE '%Quer%')";
     elseif ($cat === 'pending') $where[] = rghs_pending_condition();
+
+    $pay = trim($g['pay'] ?? '');
+    if ($pay === 'paid')      $where[] = "paid_amount > 0 AND (payment_status IS NULL OR payment_status LIKE '%SUCCESS%')";
+    elseif ($pay === 'process') $where[] = "payment_status LIKE '%PROCESS%'";
+    elseif ($pay === 'unpaid') $where[] = "(paid_amount = 0 OR paid_amount IS NULL) AND (payment_status IS NULL OR payment_status NOT LIKE '%PROCESS%')";
 
     return [$where ? ('WHERE ' . implode(' AND ', $where)) : '', $args];
 }

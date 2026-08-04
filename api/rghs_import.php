@@ -33,6 +33,80 @@ if (!hash_equals($_SESSION['csrf'] ?? '', (string)$token)) {
 rghs_ensure_table();
 $pdo = db();
 
+$kind = ($body['kind'] ?? 'claims') === 'payments' ? 'payments' : 'claims';
+
+/* ============================ PAYMENTS ============================ */
+if ($kind === 'payments') {
+    $pfields = rghs_payment_field_names();
+    $np = count($pfields);
+    $pdate = array_flip(rghs_payment_date_fields());
+    $pamt  = array_flip(rghs_payment_amount_fields());
+    $idxTidP = array_search('tid', $pfields, true);
+
+    $batch = $body['batch'] ?? [];
+    if (!is_array($batch)) $batch = [];
+    $recs = []; $tids = [];
+    foreach ($batch as $row) {
+        if (!is_array($row)) continue;
+        $tid = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', (string)($row[$idxTidP] ?? ''));
+        $tid = trim($tid);
+        if ($tid === '') continue;
+        $rec = [];
+        foreach ($pfields as $i => $f) {
+            $val = $row[$i] ?? null;
+            if (is_string($val)) { $val = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $val); $val = trim($val); }
+            if (isset($pdate[$f]))     $val = rghs_pdate($val);
+            elseif (isset($pamt[$f]))  $val = rghs_amount($val);
+            elseif ($val === '')       $val = null;
+            $rec[$f] = $val;
+        }
+        $rec['tid'] = $tid;
+        $recs[] = $rec; $tids[] = $tid;
+    }
+    if (!$recs) { echo json_encode(['ok'=>true,'read'=>0,'inserted'=>0,'updated'=>0,'changed'=>0]); exit; }
+
+    $prevP = [];
+    $in = implode(',', array_fill(0, count($tids), '?'));
+    $ps = $pdo->prepare("SELECT tid FROM rghs_payments WHERE tid IN ($in)");
+    $ps->execute($tids);
+    foreach ($ps as $r) $prevP[$r['tid']] = true;
+
+    $colSql = '`' . implode('`,`', $pfields) . '`';
+    $ph1 = '(' . implode(',', array_fill(0, $np, '?')) . ')';
+    $placeholders = implode(',', array_fill(0, count($recs), $ph1));
+    $updates = [];
+    foreach ($pfields as $c) { if ($c === 'tid') continue; $updates[] = "`$c` = VALUES(`$c`)"; }
+    $updates[] = "`updated_at` = NOW()";
+    $sql = "INSERT INTO rghs_payments ($colSql) VALUES $placeholders ON DUPLICATE KEY UPDATE " . implode(', ', $updates);
+    $args = [];
+    foreach ($recs as $rec) foreach ($pfields as $c) $args[] = $rec[$c];
+
+    $ins = 0; $upd = 0;
+    foreach ($recs as $rec) { if (isset($prevP[$rec['tid']])) $upd++; else $ins++; }
+
+    try {
+        $pdo->beginTransaction();
+        $pdo->prepare($sql)->execute($args);
+        rghs_rollup_payments($tids);
+        $pdo->commit();
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(500);
+        echo json_encode(['error'=>'db', 'message'=>$e->getMessage()]);
+        exit;
+    }
+
+    if (!empty($body['first'])) {
+        try {
+            $pdo->prepare("INSERT INTO rghs_uploads (filename, kind, rows_read, inserted, updated) VALUES (?,?,?,?,?)")
+                ->execute([mb_substr((string)($body['filename'] ?? 'payments'), 0, 200), 'payments', count($recs), $ins, $upd]);
+        } catch (Exception $e) {}
+    }
+    echo json_encode(['ok'=>true, 'read'=>count($recs), 'inserted'=>$ins, 'updated'=>$upd, 'changed'=>0]);
+    exit;
+}
+
+/* ============================ CLAIMS ============================ */
 $fields  = rghs_field_names();                 // ordered
 $nfields = count($fields);
 $dateSet = array_flip(rghs_date_fields());
@@ -127,8 +201,8 @@ try {
 // log the upload once per file (on the first batch)
 if (!empty($body['first'])) {
     try {
-        $pdo->prepare("INSERT INTO rghs_uploads (filename, rows_read, inserted, updated) VALUES (?,?,?,?)")
-            ->execute([mb_substr((string)($body['filename'] ?? 'upload'), 0, 200), count($rowsData), $inserted, $updated]);
+        $pdo->prepare("INSERT INTO rghs_uploads (filename, kind, rows_read, inserted, updated) VALUES (?,?,?,?,?)")
+            ->execute([mb_substr((string)($body['filename'] ?? 'upload'), 0, 200), 'claims', count($rowsData), $inserted, $updated]);
     } catch (Exception $e) {}
 }
 

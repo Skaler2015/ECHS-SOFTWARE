@@ -58,6 +58,18 @@ $shortfall = $sf['claim'] - $sf['cu'];
 $monthly = $pdo->query("SELECT DATE_FORMAT(submit_date,'%Y-%m') ym, COUNT(*) n, COALESCE(SUM(claim_amt),0) amt FROM rghs_claims WHERE submit_date IS NOT NULL GROUP BY ym ORDER BY ym DESC LIMIT 15")->fetchAll();
 $monthly=array_reverse($monthly); $mBars=[]; foreach($monthly as $m) $mBars[]=[rml($m['ym']),(float)$m['amt']];
 
+// payments
+$payAgg = $pdo->query("SELECT COUNT(*) total,
+        COALESCE(SUM(CASE WHEN final_status LIKE '%SUCCESS%' THEN paid_amount ELSE 0 END),0) paid,
+        COALESCE(SUM(CASE WHEN final_status LIKE '%PROCESS%' THEN paid_amount ELSE 0 END),0) inproc,
+        COALESCE(SUM(tds_deducted),0) tds,
+        SUM(final_status LIKE '%SUCCESS%') paidn, SUM(final_status LIKE '%PROCESS%') procn
+    FROM rghs_payments")->fetch();
+$hasPay = ((int)$payAgg['total']) > 0;
+$payMonthly = $pdo->query("SELECT DATE_FORMAT(credit_date,'%Y-%m') ym, COALESCE(SUM(paid_amount),0) amt
+    FROM rghs_payments WHERE final_status LIKE '%SUCCESS%' AND credit_date IS NOT NULL GROUP BY ym ORDER BY ym DESC LIMIT 15")->fetchAll();
+$payMonthly = array_reverse($payMonthly); $payBars=[]; foreach($payMonthly as $m) $payBars[]=[rml($m['ym']),(float)$m['amt']];
+
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="page-head">
@@ -73,6 +85,15 @@ require __DIR__ . '/includes/header.php';
     <div class="stat-card info"><div class="stat-num"><?= number_format($qry['n']) ?></div><div class="stat-lbl">Query me</div></div>
     <div class="stat-card warn"><div class="stat-num"><?= inr($shortfall>0?$shortfall:0,0) ?></div><div class="stat-lbl">Shortfall (claimed−approved)</div></div>
 </div>
+
+<?php if ($hasPay): ?>
+<div class="stat-grid">
+    <div class="stat-card ok"><div class="stat-num"><?= inr($payAgg['paid'],0) ?></div><div class="stat-lbl">Total received (<?= number_format($payAgg['paidn']) ?>)</div></div>
+    <div class="stat-card warn"><div class="stat-num"><?= inr($payAgg['inproc'],0) ?></div><div class="stat-lbl">Payment in-process (<?= number_format($payAgg['procn']) ?>)</div></div>
+    <div class="stat-card info"><div class="stat-num"><?= inr($payAgg['tds'],0) ?></div><div class="stat-lbl">TDS deducted</div></div>
+</div>
+<div class="card"><h2>Monthly — payment received (credit date)</h2><?php rbars($payBars,'bar bar-ok'); ?></div>
+<?php endif; ?>
 
 <div class="card">
     <h2>Yearly summary</h2>
