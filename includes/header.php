@@ -76,7 +76,8 @@ if ($scheme === 'ECHS') {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($page_title) ?> · <?= e(APP_NAME) ?></title>
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
+    <?php $cssv = @filemtime(__DIR__ . '/../assets/css/style.css') ?: APP_VERSION; ?>
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=<?= $cssv ?>">
     <link rel="manifest" href="<?= BASE_URL ?>/manifest.webmanifest">
     <meta name="theme-color" content="#2563EB">
     <link rel="apple-touch-icon" href="<?= BASE_URL ?>/assets/icon.php?s=192">
