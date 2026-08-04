@@ -27,20 +27,34 @@ $page_title = 'Claim ' . $c['tid'];
 // save note / doctor override
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
-    if (($_POST['act'] ?? '') === 'save') {
+    $act = $_POST['act'] ?? '';
+    if ($act === 'save') {
         $doc = trim($_POST['doctor_name'] ?? '');
         $note = trim($_POST['notes'] ?? '');
+        $assignee = trim($_POST['assigned_to'] ?? '');
         $fu = !empty($_POST['followup']) ? 1 : 0;
         $manual = ($doc !== '' && $doc !== ($c['doctor_name'] ?? '')) ? 1 : (int)$c['doctor_manual'];
-        $pdo->prepare("UPDATE rghs_claims SET doctor_name=?, doctor_manual=?, notes=?, followup=?, updated_at=NOW() WHERE tid=?")
-            ->execute([$doc ?: null, $doc!==''?1:$manual, $note ?: null, $fu, $tid]);
+        $pdo->prepare("UPDATE rghs_claims SET doctor_name=?, doctor_manual=?, notes=?, followup=?, assigned_to=?, updated_at=NOW() WHERE tid=?")
+            ->execute([$doc ?: null, $doc!==''?1:$manual, $note ?: null, $fu, $assignee ?: null, $tid]);
         flash('Save ho gaya.');
+        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
+    } elseif ($act === 'addnote') {
+        $note = trim($_POST['note'] ?? '');
+        if ($note !== '') {
+            $who = current_user()['full_name'] ?? 'staff';
+            $pdo->prepare("INSERT INTO rghs_notes (tid,note,who) VALUES (?,?,?)")->execute([$tid, $note, $who]);
+            flash('Note add ho gaya.');
+        }
         redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
     }
 }
 
 $hist = $pdo->prepare("SELECT * FROM rghs_claim_history WHERE tid=? ORDER BY changed_at DESC");
 $hist->execute([$tid]); $history = $hist->fetchAll();
+
+$notesList = $pdo->prepare("SELECT * FROM rghs_notes WHERE tid=? ORDER BY id DESC");
+$notesList->execute([$tid]); $notesList = $notesList->fetchAll();
+$staff = rghs_staff_list();
 
 // payment record (from Payment Tracker upload), if any
 $pst = $pdo->prepare("SELECT * FROM rghs_payments WHERE tid=?");
@@ -140,16 +154,38 @@ require __DIR__ . '/includes/header.php';
 
 <div class="detail-grid">
     <div class="card form">
-        <h2>Notes & doctor</h2>
+        <h2>Doctor · Assign · Flag</h2>
         <form method="post">
             <?= csrf_field() ?><input type="hidden" name="act" value="save">
-            <div class="fld"><label>Treating doctor</label><input name="doctor_name" value="<?= e($c['doctor_name']) ?>"></div>
-            <div class="fld"><label>Notes (aapke liye)</label><textarea name="notes" rows="3"><?= e($c['notes']) ?></textarea></div>
+            <div class="fld"><label>Treating doctor</label><input name="doctor_name" list="rdocs" value="<?= e($c['doctor_name']) ?>">
+                <datalist id="rdocs"><?php foreach (rghs_doctor_list() as $d): ?><option value="<?= e($d) ?>"><?php endforeach; ?></datalist></div>
+            <div class="fld"><label>Assigned to (staff)</label>
+                <select name="assigned_to"><option value="">— koi nahi —</option>
+                <?php foreach ($staff as $sf): ?><option value="<?= e($sf) ?>" <?= ($c['assigned_to']??'')===$sf?'selected':'' ?>><?= e($sf) ?></option><?php endforeach; ?></select></div>
+            <div class="fld"><label>Quick note (single)</label><textarea name="notes" rows="2"><?= e($c['notes']) ?></textarea></div>
             <label class="inline" style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" name="followup" value="1" <?= $c['followup']?'checked':'' ?>> Follow-up flag</label>
             <div class="form-actions"><button class="btn btn-primary">Save</button></div>
         </form>
-        <p class="muted small">Doctor naam badloge to woh dubara upload par bhi bana rahega.</p>
     </div>
+    <div class="card">
+        <h2>📝 Notes timeline</h2>
+        <form method="post" style="display:flex;gap:8px;margin-bottom:12px">
+            <?= csrf_field() ?><input type="hidden" name="act" value="addnote">
+            <input name="note" placeholder="Naya note likhein…" required style="flex:1;padding:9px 11px;border:1px solid var(--line);border-radius:9px">
+            <button class="btn btn-primary">Add</button>
+        </form>
+        <?php if (!$notesList): ?><p class="muted small">Abhi koi note nahi.</p><?php else: ?>
+        <ul class="timeline">
+            <?php foreach ($notesList as $nt): ?>
+                <li><span class="tl-date"><?= e(date('d-m-y', strtotime($nt['created_at']))) ?></span>
+                    <span class="small"><?= e($nt['note']) ?> <span class="muted">— <?= e($nt['who']) ?></span></span></li>
+            <?php endforeach; ?>
+        </ul>
+        <?php endif; ?>
+    </div>
+</div>
+
+<div class="detail-grid">
     <div class="card">
         <h2>Status history</h2>
         <?php if (!$history): ?><p class="muted">Koi change record nahi.</p><?php else: ?>

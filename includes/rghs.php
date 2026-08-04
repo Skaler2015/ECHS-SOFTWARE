@@ -183,6 +183,7 @@ function rghs_ensure_table() {
         'utr'           => "VARCHAR(80) NULL",
         'payment_date'  => "DATE NULL",
         'tds_paid'      => "DECIMAL(14,2) NOT NULL DEFAULT 0",
+        'assigned_to'   => "VARCHAR(120) NULL",   // staff handling this claim
         'first_seen'    => "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
         'updated_at'    => "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
     ] as $name => $def) {
@@ -253,6 +254,24 @@ function rghs_ensure_table() {
         KEY `idx_rt_done` (`done`), KEY `idx_rt_due` (`due_date`), KEY `idx_rt_tid` (`tid`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+    // per-claim notes timeline
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_notes` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `tid` VARCHAR(40) NOT NULL,
+        `note` TEXT NOT NULL,
+        `who` VARCHAR(120) NULL,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY `idx_rn_tid` (`tid`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // monthly targets (scheme-wide)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_targets` (
+        `ym` CHAR(7) NOT NULL PRIMARY KEY,
+        `claims_target` INT DEFAULT 0,
+        `amount_target` DECIMAL(14,2) DEFAULT 0,
+        `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
     // activity / audit log
     $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_activity` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -274,6 +293,19 @@ function rghs_ensure_table() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
     $done = true;
+}
+
+/** Staff users (for assignment dropdowns). */
+function rghs_staff_list() {
+    $out = [];
+    try { foreach (db()->query("SELECT full_name FROM users WHERE is_active=1 ORDER BY full_name") as $r) if (!empty($r['full_name'])) $out[] = $r['full_name']; } catch (Exception $e) {}
+    return $out;
+}
+
+/** Get/set the monthly target. */
+function rghs_target($ym) {
+    try { $s = db()->prepare("SELECT claims_target, amount_target FROM rghs_targets WHERE ym=?"); $s->execute([$ym]); return $s->fetch() ?: ['claims_target'=>0,'amount_target'=>0]; }
+    catch (Exception $e) { return ['claims_target'=>0,'amount_target'=>0]; }
 }
 
 /** Log an RGHS activity row (best effort). */
@@ -419,6 +451,10 @@ function rghs_build_filter(array $g) {
     $flag = trim($g['flag'] ?? '');
     if ($flag === 'nodoctor') $where[] = "(doctor_name IS NULL OR doctor_name = '')";
     elseif ($flag === 'followup') $where[] = "followup = 1";
+
+    $assignee = trim($g['assignee'] ?? '');
+    if ($assignee === '__none') $where[] = "(assigned_to IS NULL OR assigned_to = '')";
+    elseif ($assignee !== '') { $where[] = 'assigned_to = ?'; $args[] = $assignee; }
 
     $age = trim($g['age'] ?? '');
     if ($age !== '' && ctype_digit($age)) { $where[] = "submit_date IS NOT NULL AND DATEDIFF(CURDATE(),submit_date) > ?"; $args[] = (int)$age; }

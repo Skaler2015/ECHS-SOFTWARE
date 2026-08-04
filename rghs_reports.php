@@ -80,6 +80,14 @@ $recon = $pdo->query("SELECT
         COALESCE(SUM(CASE WHEN paid_amount>0 AND cu_amt>0 AND paid_amount < cu_amt-1 THEN (cu_amt-paid_amount) ELSE 0 END),0) short_amt
     FROM rghs_claims")->fetch();
 
+// receivables + cash-flow
+$inproc = $pdo->query("SELECT COALESCE(SUM(cu_amt),0) amt, COUNT(*) n FROM rghs_claims WHERE payment_status LIKE '%PROCESS%'")->fetch();
+$realDays = $pdo->query("SELECT AVG(DATEDIFF(payment_date,cu_action_date)) d FROM rghs_claims WHERE payment_date IS NOT NULL AND cu_action_date IS NOT NULL AND payment_date>=cu_action_date")->fetch()['d'];
+$totalReceivable = (float)$recon['unpaid_amt'] + (float)$inproc['amt'];
+// monthly realized average (last 6 months) for a simple forecast
+$recentPaid = $pdo->query("SELECT DATE_FORMAT(payment_date,'%Y-%m') ym, COALESCE(SUM(paid_amount),0) s FROM rghs_claims WHERE payment_date IS NOT NULL AND payment_date >= DATE_SUB(CURDATE(),INTERVAL 6 MONTH) GROUP BY ym")->fetchAll();
+$avgMonthly = 0; if ($recentPaid) { $sum=0; foreach($recentPaid as $r)$sum+=$r['s']; $avgMonthly=$sum/max(1,count($recentPaid)); }
+
 // approved-but-unpaid aging (by CU action date, fallback submit date)
 $unpaidAging = [];
 foreach ([['0-30','BETWEEN 0 AND 30'],['31-60','BETWEEN 31 AND 60'],['61-90','BETWEEN 61 AND 90'],['90+','> 90']] as $b) {
@@ -166,6 +174,8 @@ require __DIR__ . '/includes/header.php';
 <div class="page-head">
     <h1>📊 RGHS Reports</h1>
     <div class="page-actions">
+        <a class="btn" target="_blank" href="<?= BASE_URL ?>/rghs_month_report.php?scheme=RGHS">🗓️ Monthly Report</a>
+        <a class="btn" href="<?= BASE_URL ?>/api/rghs_export_xls.php?scheme=RGHS">⬇ Excel</a>
         <a class="btn" href="<?= BASE_URL ?>/api/rghs_export_csv.php?scheme=RGHS">⬇ CSV</a>
     </div>
 </div>
@@ -258,6 +268,27 @@ require __DIR__ . '/includes/header.php';
     </table></div>
 </div>
 <?php endif; ?>
+
+<div class="detail-grid">
+    <div class="card">
+        <h2>📄 Receivables Statement (paisa aana baaki)</h2>
+        <table class="kv">
+            <tr><td>Approved — abhi tak unpaid</td><th class="danger"><?= money($recon['unpaid_amt']) ?> <span class="muted small">(<?= number_format($recon['unpaid_n']) ?>)</span></th></tr>
+            <tr><td>Payment in-process</td><th class="warn"><?= money($inproc['amt']) ?> <span class="muted small">(<?= number_format($inproc['n']) ?>)</span></th></tr>
+            <tr><td><strong>Total receivable</strong></td><th style="font-size:1.15rem"><?= money($totalReceivable) ?></th></tr>
+        </table>
+        <p class="muted small">Yeh kul paisa jo RGHS se aana baaki hai. <a class="link" href="<?= BASE_URL ?>/rghs_claims.php?scheme=RGHS&cat=approved&pay=unpaid">Unpaid claims dekhein</a></p>
+    </div>
+    <div class="card">
+        <h2>💵 Cash-flow forecast</h2>
+        <table class="kv">
+            <tr><td>Avg realization time (CU approve → paisa)</td><th><?= $realDays!==null?round($realDays).' din':'-' ?></th></tr>
+            <tr><td>Pichhle 6 mahine ka avg / month received</td><th><?= money($avgMonthly) ?></th></tr>
+            <tr><td>Total receivable clear hone me (~est.)</td><th><?= $avgMonthly>0?ceil($totalReceivable/$avgMonthly).' mahine':'-' ?></th></tr>
+        </table>
+        <p class="muted small">Historical rate ke aadhar par mota-mota anumaan — sirf planning ke liye.</p>
+    </div>
+</div>
 
 <div class="card"><h2>Monthly — submitted claim amount</h2><?php rbars($mBars); ?></div>
 

@@ -26,6 +26,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($doc !== '') { try { $pdo->prepare("INSERT IGNORE INTO rghs_doctors (name) VALUES (?)")->execute([$doc]); } catch (Exception $e) {} }
             rghs_log('bulk_setdoctor', count($tids)." claims -> ".$doc);
             flash(count($tids)." claims me doctor set ho gaya.");
+        } elseif ($act === 'assign') {
+            $who = trim($_POST['assignee'] ?? '');
+            $stmt = $pdo->prepare("UPDATE rghs_claims SET assigned_to=?, updated_at=NOW() WHERE tid IN ($in)");
+            $stmt->execute(array_merge([$who ?: null], $tids));
+            rghs_log('bulk_assign', count($tids)." -> ".$who);
+            flash(count($tids)." claims assign ho gaye.");
         } elseif ($act === 'flag') {
             $pdo->prepare("UPDATE rghs_claims SET followup=1 WHERE tid IN ($in)")->execute($tids);
             rghs_log('bulk_flag', count($tids).' claims');
@@ -136,6 +142,11 @@ require __DIR__ . '/includes/header.php';
         <option value="process" <?= ($_GET['pay']??'')==='process'?'selected':'' ?>>In process</option>
         <option value="unpaid" <?= ($_GET['pay']??'')==='unpaid'?'selected':'' ?>>Unpaid</option>
     </select>
+    <select name="assignee">
+        <option value="">Assignee: sab</option>
+        <option value="__none" <?= ($_GET['assignee']??'')==='__none'?'selected':'' ?>>Bina assign</option>
+        <?php foreach (rghs_staff_list() as $sf): ?><option value="<?= e($sf) ?>" <?= ($_GET['assignee']??'')===$sf?'selected':'' ?>><?= e($sf) ?></option><?php endforeach; ?>
+    </select>
     <button class="btn btn-primary">Filter</button>
     <?php if (array_diff_key($_GET, ['scheme'=>1,'page'=>1,'sort'=>1,'dir'=>1,'per'=>1])): ?>
         <a class="btn btn-light" href="<?= BASE_URL ?>/rghs_claims.php?scheme=RGHS">Reset</a>
@@ -163,6 +174,11 @@ require __DIR__ . '/includes/header.php';
             <strong><span id="selCount">0</span> selected:</strong>
             <input list="docs" id="bulkDoc" placeholder="Doctor naam" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px">
             <button type="button" class="btn btn-light" onclick="bulk('setdoctor')">Set doctor</button>
+            <select id="bulkAssignee" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px">
+                <option value="">— assign to —</option>
+                <?php foreach (rghs_staff_list() as $sf): ?><option value="<?= e($sf) ?>"><?= e($sf) ?></option><?php endforeach; ?>
+            </select>
+            <button type="button" class="btn btn-light" onclick="bulk('assign')">Assign</button>
             <button type="button" class="btn btn-light" onclick="bulk('flag')">🚩 Flag</button>
             <button type="button" class="btn btn-light" onclick="bulk('unflag')">Unflag</button>
             <input id="bulkTitle" placeholder="Task title" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px">
@@ -233,6 +249,7 @@ function bulk(act){
         addHidden('doctor_name', d); }
     if (act==='addtask'){ var t=document.getElementById('bulkTitle').value.trim(); if(!t){alert('Task title daalein.');return;}
         addHidden('title', t); addHidden('due_date', document.getElementById('bulkDue').value); }
+    if (act==='assign'){ addHidden('assignee', document.getElementById('bulkAssignee').value); }
     if (act==='unflag' && !confirm('Selected claims ka follow-up flag hataayein?')) return;
     document.getElementById('bulkAct').value = act;
     document.getElementById('bulkForm').submit();

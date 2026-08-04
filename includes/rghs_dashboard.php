@@ -8,10 +8,30 @@ $active = 'dashboard';
 $page_title = 'RGHS Dashboard';
 $pdo = db();
 
+// set monthly target (admin)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act'] ?? '') === 'settarget') {
+    csrf_check();
+    $ym = preg_match('/^\d{4}-\d{2}$/', $_POST['ym'] ?? '') ? $_POST['ym'] : date('Y-m');
+    $pdo->prepare("INSERT INTO rghs_targets (ym,claims_target,amount_target) VALUES (?,?,?)
+        ON DUPLICATE KEY UPDATE claims_target=VALUES(claims_target), amount_target=VALUES(amount_target)")
+        ->execute([$ym, (int)($_POST['claims_target'] ?? 0), (float)preg_replace('/[^0-9.]/','',$_POST['amount_target'] ?? '0')]);
+    rghs_log('set_target', "$ym");
+    flash('Target set ho gaya.');
+    redirect(BASE_URL.'/dashboard.php?scheme=RGHS');
+}
+
 $total = (int)$pdo->query("SELECT COUNT(*) n FROM rghs_claims")->fetch()['n'];
 
 // keep a daily safety snapshot (best-effort, once per day)
 if ($total > 0) { @rghs_daily_snapshot(); }
+
+// this-month target vs achieved
+$thisYm = date('Y-m');
+$tgt = rghs_target($thisYm);
+$mAch = $pdo->prepare("SELECT COUNT(*) n, COALESCE(SUM(claim_amt),0) amt FROM rghs_claims WHERE DATE_FORMAT(submit_date,'%Y-%m')=?");
+$mAch->execute([$thisYm]); $ach = $mAch->fetch();
+$mRecv = $pdo->prepare("SELECT COALESCE(SUM(paid_amount),0) s FROM rghs_claims WHERE DATE_FORMAT(payment_date,'%Y-%m')=?");
+$mRecv->execute([$thisYm]); $achRecv = (float)$mRecv->fetch()['s'];
 
 // alerts
 $alerts = [];
@@ -130,6 +150,40 @@ require __DIR__ . '/header.php';
 </div>
 <?php endif; ?>
 
+<?php
+$tgtClaims = (int)$tgt['claims_target']; $tgtAmt = (float)$tgt['amount_target'];
+$pc = $tgtClaims>0 ? min(100,round($ach['n']/$tgtClaims*100)) : 0;
+$pa = $tgtAmt>0 ? min(100,round($ach['amt']/$tgtAmt*100)) : 0;
+?>
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <h2 style="margin:0">🎯 <?= date('F Y') ?> — Target vs Achieved</h2>
+        <details><summary class="link" style="cursor:pointer">Target set/edit</summary>
+            <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                <?= csrf_field() ?><input type="hidden" name="act" value="settarget"><input type="hidden" name="ym" value="<?= $thisYm ?>">
+                <input name="claims_target" type="number" placeholder="Claims target" value="<?= $tgtClaims?:'' ?>" style="padding:8px;border:1px solid var(--line);border-radius:8px;width:130px">
+                <input name="amount_target" placeholder="Amount target ₹" value="<?= $tgtAmt?:'' ?>" style="padding:8px;border:1px solid var(--line);border-radius:8px;width:150px">
+                <button class="btn btn-primary">Save</button>
+            </form>
+        </details>
+    </div>
+    <?php if ($tgtClaims>0 || $tgtAmt>0): ?>
+    <div class="detail-grid" style="margin-top:12px">
+        <div>
+            <div class="muted small">Claims: <strong><?= number_format($ach['n']) ?></strong> / <?= number_format($tgtClaims) ?> (<?= $pc ?>%)</div>
+            <div style="background:var(--line);border-radius:999px;height:10px;overflow:hidden;margin-top:6px"><div style="background:var(--brand);height:100%;width:<?= $pc ?>%"></div></div>
+        </div>
+        <div>
+            <div class="muted small">Claimed ₹: <strong><?= inr($ach['amt'],0) ?></strong> / <?= inr($tgtAmt,0) ?> (<?= $pa ?>%)</div>
+            <div style="background:var(--line);border-radius:999px;height:10px;overflow:hidden;margin-top:6px"><div style="background:var(--gold);height:100%;width:<?= $pa ?>%"></div></div>
+        </div>
+    </div>
+    <p class="muted small" style="margin-top:10px">Is mahine received: <strong><?= money($achRecv) ?></strong></p>
+    <?php else: ?>
+    <p class="muted small" style="margin-top:8px">Is mahine ka target set nahi. Upar "Target set/edit" se laga dijiye.</p>
+    <?php endif; ?>
+</div>
+
 <div class="detail-grid">
     <div class="card">
         <h2>Claim status</h2>
@@ -138,10 +192,10 @@ require __DIR__ . '/header.php';
                 <div class="donut-hole"><strong><?= number_format($totCat) ?></strong><span>claims</span></div>
             </div>
             <ul class="legend">
-                <li><span class="lg" style="background:#16A34A"></span> Approved — <?= number_format($cat['approved']) ?> (<?= $pA ?>%)</li>
-                <li><span class="lg" style="background:#f59e0b"></span> Pending — <?= number_format($cat['pending']) ?> (<?= $pP ?>%)</li>
-                <li><span class="lg" style="background:#0ea5e9"></span> Query — <?= number_format($cat['query']) ?> (<?= $pQ ?>%)</li>
-                <li><span class="lg" style="background:#dc3545"></span> Rejected — <?= number_format($cat['rejected']) ?> (<?= $pR ?>%)</li>
+                <li><a class="link" style="margin:0" href="<?= BASE_URL ?>/rghs_claims.php?scheme=RGHS&cat=approved"><span class="lg" style="background:#16A34A"></span> Approved — <?= number_format($cat['approved']) ?> (<?= $pA ?>%)</a></li>
+                <li><a class="link" style="margin:0" href="<?= BASE_URL ?>/rghs_claims.php?scheme=RGHS&cat=pending"><span class="lg" style="background:#f59e0b"></span> Pending — <?= number_format($cat['pending']) ?> (<?= $pP ?>%)</a></li>
+                <li><a class="link" style="margin:0" href="<?= BASE_URL ?>/rghs_claims.php?scheme=RGHS&cat=query"><span class="lg" style="background:#0ea5e9"></span> Query — <?= number_format($cat['query']) ?> (<?= $pQ ?>%)</a></li>
+                <li><a class="link" style="margin:0" href="<?= BASE_URL ?>/rghs_claims.php?scheme=RGHS&cat=rejected"><span class="lg" style="background:#dc3545"></span> Rejected — <?= number_format($cat['rejected']) ?> (<?= $pR ?>%)</a></li>
             </ul>
         </div>
     </div>

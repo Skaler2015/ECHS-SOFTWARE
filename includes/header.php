@@ -46,6 +46,7 @@ if ($scheme === 'ECHS') {
         ['grp' => 'Main', 'items' => [
             ['k'=>'dashboard','t'=>'Dashboard','i'=>'dashboard','u'=>BASE_URL.'/dashboard.php?scheme=RGHS'],
             ['k'=>'claims','t'=>'Claims','i'=>'file','u'=>BASE_URL.'/rghs_claims.php?scheme=RGHS'],
+            ['k'=>'changes','t'=>'Kya Badla','i'=>'bell','u'=>BASE_URL.'/rghs_changes.php?scheme=RGHS'],
             ['k'=>'tasks','t'=>'Tasks','i'=>'checks','u'=>BASE_URL.'/rghs_tasks.php?scheme=RGHS'],
         ]],
         ['grp' => 'Lookup', 'items' => [
@@ -54,10 +55,12 @@ if ($scheme === 'ECHS') {
         ]],
         ['grp' => 'Data', 'items' => [
             ['k'=>'reports','t'=>'Reports','i'=>'chart','u'=>BASE_URL.'/rghs_reports.php?scheme=RGHS'],
+            ['k'=>'bank','t'=>'Bank Reconcile','i'=>'card','u'=>BASE_URL.'/rghs_bank.php?scheme=RGHS'],
             ['k'=>'upload','t'=>'Upload Excel','i'=>'upload','u'=>BASE_URL.'/rghs_upload.php?scheme=RGHS'],
             ['k'=>'backup','t'=>'Data Safety','i'=>'database','u'=>BASE_URL.'/rghs_backup.php?scheme=RGHS'],
         ]],
         ['grp' => 'Account', 'items' => [
+            ['k'=>'users','t'=>'Staff Users','i'=>'users','u'=>BASE_URL.'/rghs_users.php?scheme=RGHS'],
             ['k'=>'activity','t'=>'Activity Log','i'=>'chart','u'=>BASE_URL.'/rghs_activity.php?scheme=RGHS'],
             ['k'=>'settings','t'=>'Settings','i'=>'settings','u'=>BASE_URL.'/settings.php'],
         ]],
