@@ -1,13 +1,14 @@
 name: Deploy to Hosting (noble.subhashkaler.com)
 
 # Jab bhi is branch par code push hoga, files apne aap hosting par
-# FTP se upload ho jayengi.
+# FTP se upload ho jayengi. Hostinger ka FTP kabhi-kabhi slow hota hai,
+# isliye niche 3 baar tak apne aap retry hoti hai.
 on:
   push:
     branches:
       - claude/echs-online-software-do3gb3
       - main
-  workflow_dispatch:   # manually bhi chala sakte hain (Actions tab se)
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -16,25 +17,69 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 📤 Upload to hosting via FTP
+      - name: 📤 Upload via FTP (try 1)
+        id: ftp1
+        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          # Yeh 3 values GitHub repo ki Settings > Secrets me daalni hain:
-          #   FTP_SERVER    = aapke hosting ka FTP host (jaise ftp.subhashkaler.com)
-          #   FTP_USERNAME  = FTP username
-          #   FTP_PASSWORD  = FTP password
-          server:   ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port:     21
-          timeout:  120000
-
-          # Hostinger domain-FTP account already lands INSIDE public_html,
-          # so the target is just the subdomain folder "noble/".
-          # (Earlier "public_html/noble/" created a double public_html.)
+          server:     ${{ secrets.FTP_SERVER }}
+          username:   ${{ secrets.FTP_USERNAME }}
+          password:   ${{ secrets.FTP_PASSWORD }}
+          port:       21
+          timeout:    120000
           server-dir: ${{ secrets.FTP_REMOTE_DIR || 'noble/' }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/README.md
+            **/DEPLOY.md
+            **/.cpanel.yml
+            config/secrets.php
+            config/secrets.sample.php
+            uploads/echs/**
 
-          # Yeh files hosting par upload NAHI hongi (developer/config files).
+      - name: ⏳ Wait before retry 2
+        if: steps.ftp1.outcome == 'failure'
+        run: sleep 15
+
+      - name: 📤 Upload via FTP (try 2)
+        id: ftp2
+        if: steps.ftp1.outcome == 'failure'
+        continue-on-error: true
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server:     ${{ secrets.FTP_SERVER }}
+          username:   ${{ secrets.FTP_USERNAME }}
+          password:   ${{ secrets.FTP_PASSWORD }}
+          port:       21
+          timeout:    120000
+          server-dir: ${{ secrets.FTP_REMOTE_DIR || 'noble/' }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/README.md
+            **/DEPLOY.md
+            **/.cpanel.yml
+            config/secrets.php
+            config/secrets.sample.php
+            uploads/echs/**
+
+      - name: ⏳ Wait before retry 3
+        if: steps.ftp1.outcome == 'failure' && steps.ftp2.outcome == 'failure'
+        run: sleep 25
+
+      - name: 📤 Upload via FTP (try 3 - final)
+        if: steps.ftp1.outcome == 'failure' && steps.ftp2.outcome == 'failure'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server:     ${{ secrets.FTP_SERVER }}
+          username:   ${{ secrets.FTP_USERNAME }}
+          password:   ${{ secrets.FTP_PASSWORD }}
+          port:       21
+          timeout:    120000
+          server-dir: ${{ secrets.FTP_REMOTE_DIR || 'noble/' }}
           exclude: |
             **/.git*
             **/.git*/**
