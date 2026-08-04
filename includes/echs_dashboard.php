@@ -34,9 +34,26 @@ try {
     $actionN = (int)($a['n'] ?? 0);
 } catch (Exception $e) {}
 
+// last upload reminder
+$lastUp = null; $daysSince = null;
+try {
+    $lu = db()->query("SELECT MAX(uploaded_at) m FROM echs_uploads")->fetch();
+    if (!empty($lu['m'])) { $lastUp = $lu['m']; $daysSince = (int)floor((time() - strtotime($lu['m'])) / 86400); }
+} catch (Exception $e) {}
+
 $hasData = (int)$tot['n'] > 0;
 
 require __DIR__ . '/header.php';
+
+if ($hasData && $daysSince !== null && $daysSince >= 5): ?>
+<div class="flash flash-error" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <span>⏰ <strong><?= $daysSince ?> din</strong> se koi nayi Excel upload nahi hui (aakhri: <?= fdate($lastUp) ?>). Portal se nayi CLAIMLIST upload kar dein.</span>
+    <a class="btn btn-primary" href="<?= BASE_URL ?>/echs_upload.php?scheme=ECHS">📥 Ab Upload karein</a>
+</div>
+<?php elseif ($hasData && $lastUp): ?>
+<p class="muted small">✅ Aakhri upload: <?= fdate($lastUp) ?> (<?= $daysSince ?> din pehle)</p>
+<?php endif; ?>
+<?php
 ?>
 <div class="page-head">
     <h1>🎖️ ECHS Dashboard</h1>

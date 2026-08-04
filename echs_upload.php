@@ -49,14 +49,34 @@ require __DIR__ . '/includes/header.php';
 
     <form method="post" enctype="multipart/form-data" class="form">
         <?= csrf_field() ?>
-        <div class="upload-drop">
-            <input type="file" name="claimfiles[]" id="claimfiles" multiple accept=".xls,.zip">
-            <label for="claimfiles">📎 Files chunein (.xls ya .zip) — ek ya zyada</label>
+        <div class="upload-drop" id="dropZone">
+            <div style="font-size:2rem">📎</div>
+            <label for="claimfiles"><strong>Files yahan khींchकर chhodें</strong> — ya click karके chunें (.xls / .zip)</label>
+            <input type="file" name="claimfiles[]" id="claimfiles" multiple accept=".xls,.zip" style="margin-top:10px">
+            <div id="fileList" class="filelist"></div>
         </div>
         <div class="form-actions">
             <button class="btn btn-primary">⬆ Upload &amp; Update</button>
         </div>
     </form>
+    <script>
+    (function(){
+        var dz = document.getElementById('dropZone'),
+            inp = document.getElementById('claimfiles'),
+            list = document.getElementById('fileList');
+        function show(){
+            if(!inp.files.length){ list.innerHTML=''; return; }
+            var names=[]; for(var i=0;i<inp.files.length;i++) names.push('📄 '+inp.files[i].name);
+            list.innerHTML = names.join('<br>');
+        }
+        inp.addEventListener('change', show);
+        ['dragenter','dragover'].forEach(function(ev){ dz.addEventListener(ev,function(e){e.preventDefault();dz.classList.add('drag');}); });
+        ['dragleave','drop'].forEach(function(ev){ dz.addEventListener(ev,function(e){e.preventDefault();dz.classList.remove('drag');}); });
+        dz.addEventListener('drop', function(e){
+            if(e.dataTransfer && e.dataTransfer.files.length){ inp.files = e.dataTransfer.files; show(); }
+        });
+    })();
+    </script>
 </div>
 
 <?php if ($summary): ?>

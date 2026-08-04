@@ -222,6 +222,8 @@ h1,h2,h3{margin:0 0 .4em}
 .inline-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .tool-links{display:flex;gap:10px;flex-wrap:wrap}
 .row-overdue{background:#fff7ed}
+.upload-drop.drag{background:#e0efff;border-color:var(--primary)}
+.filelist{margin-top:12px;font-size:.88rem;color:var(--ink)}
 
 /* ---- Dark mode ---- */
 body.dark{--bg:#0f141a;--card:#161d26;--ink:#e5e9ef;--muted:#93a1b3;--line:#273140}
