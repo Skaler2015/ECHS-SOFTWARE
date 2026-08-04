@@ -296,6 +296,49 @@ body.dark .donut-hole{background:#111a2b}
 body.dark .login-card,body.dark .scheme-tile,body.dark .invoice{background:#111a2b}
 body.dark .home-page .topbar{background:#111a2b}
 body.dark code{background:#0b1220}
+body.dark .alert-item.a-danger{background:#2a1414;border-color:#3f1d1d}
+body.dark .alert-item.a-warn{background:#2a2110;border-color:#3f321a}
+body.dark .kpi,body.dark .mini-row:hover{background:#111a2b}
+body.dark .kpi-ic.b{background:#132036}body.dark .kpi-ic.g{background:#0f2018}
+body.dark .kpi-ic.o{background:#241d0e}body.dark .kpi-ic.v{background:#1b1530}
+
+/* ---------- Dashboard: alerts ---------- */
+.alert-panel{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.alert-item{display:flex;align-items:center;gap:10px;padding:11px 15px;border-radius:12px;font-size:.88rem;font-weight:500;border:1px solid transparent}
+.alert-item span{flex:1}
+.alert-item.a-danger{background:#fef2f2;color:#991b1b;border-color:#fecaca}
+.alert-item.a-warn{background:#fffbeb;color:#92400e;border-color:#fde68a}
+
+/* ---------- Dashboard: KPI ---------- */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;color:var(--ink);
+    box-shadow:var(--shadow-sm);transition:.16s;display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.kpi:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
+.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.kpi-ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.kpi-ic.b{background:#eff6ff;color:#2563EB}.kpi-ic.g{background:#ecfdf5;color:#16A34A}
+.kpi-ic.o{background:#fffbeb;color:#F59E0B}.kpi-ic.v{background:#f5f3ff;color:#7c3aed}
+.kpi-num{font-size:1.4rem;font-weight:750;letter-spacing:-.02em;line-height:1.15}
+.kpi-lbl{color:var(--muted);font-size:.8rem}
+.spark{margin-top:8px;width:100%;height:30px}
+.delta{font-size:.72rem;font-weight:700;padding:2px 7px;border-radius:20px}
+.delta.up{background:#ecfdf5;color:#047857}.delta.down{background:#fef2f2;color:#b91c1c}
+
+/* ---------- Dashboard: financial row ---------- */
+.fin-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.fin{flex:1;min-width:130px}
+.fin-lbl{color:var(--muted);font-size:.78rem;margin-bottom:2px}
+.fin-num{font-size:1.15rem;font-weight:750}
+.fin-num.ok{color:#16A34A}.fin-num.warn{color:#B45309}.fin-num.danger{color:#DC2626}
+.fin-op{font-size:1.3rem;color:var(--muted);font-weight:400}
+
+/* ---------- Dashboard: widget grid + mini list ---------- */
+.dash-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.mini-list{display:flex;flex-direction:column}
+.mini-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line-soft);color:var(--ink);font-size:.86rem}
+.mini-row:last-child{border-bottom:none}
+.mini-row:hover{background:var(--brand-50);border-radius:8px;padding-left:8px;padding-right:8px}
+.mr-main{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 
 /* ============================================================
    Responsive
@@ -306,6 +349,8 @@ body.dark code{background:#0b1220}
     .menu-btn{display:inline-flex}
     .pname{display:none}
     .container{padding:18px 14px 60px}
+    .dash-2{grid-template-columns:1fr}
+    .fin-op{display:none}
 }
 @media(max-width:720px){
     .grid2,.grid3,.grid4{grid-template-columns:1fr}
