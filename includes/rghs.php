@@ -184,6 +184,7 @@ function rghs_ensure_table() {
         'payment_date'  => "DATE NULL",
         'tds_paid'      => "DECIMAL(14,2) NOT NULL DEFAULT 0",
         'assigned_to'   => "VARCHAR(120) NULL",   // staff handling this claim
+        'dupe_flag'     => "TINYINT(1) NOT NULL DEFAULT 0",   // manually marked as duplicate
         'first_seen'    => "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
         'updated_at'    => "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
     ] as $name => $def) {
@@ -290,6 +291,34 @@ function rghs_ensure_table() {
         `payments_n` INT DEFAULT 0,
         `bytes` INT DEFAULT 0,
         `saved_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // per-claim uploaded documents (files live under uploads/rghs/, only metadata here)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_docs` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `tid` VARCHAR(40) NOT NULL,
+        `stored_name` VARCHAR(80) NOT NULL,
+        `orig_name` VARCHAR(200) NOT NULL,
+        `mime` VARCHAR(100) NULL,
+        `bytes` INT DEFAULT 0,
+        `who` VARCHAR(120) NULL,
+        `uploaded_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY `idx_rd_tid` (`tid`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // per-claim query / reply tracker (RGHS raises a query, we reply)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_queries` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `tid` VARCHAR(40) NOT NULL,
+        `query_text` TEXT NULL,
+        `reply_text` TEXT NULL,
+        `status` VARCHAR(20) NOT NULL DEFAULT 'open',
+        `raised_on` DATE NULL,
+        `replied_on` DATE NULL,
+        `who` VARCHAR(120) NULL,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY `idx_rq_tid` (`tid`),
+        KEY `idx_rq_status` (`status`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
     $done = true;

@@ -44,6 +44,7 @@ jobs:
             config/secrets.php
             config/secrets.sample.php
             uploads/echs/**
+            uploads/rghs/**
 
       - name: ⏳ Wait before retry 2
         if: steps.ftp1.outcome == 'failure'
@@ -73,6 +74,7 @@ jobs:
             config/secrets.php
             config/secrets.sample.php
             uploads/echs/**
+            uploads/rghs/**
 
       - name: ⏳ Wait before retry 3
         if: steps.ftp1.outcome == 'failure' && steps.ftp2.outcome == 'failure'
@@ -100,3 +102,4 @@ jobs:
             config/secrets.php
             config/secrets.sample.php
             uploads/echs/**
+            uploads/rghs/**

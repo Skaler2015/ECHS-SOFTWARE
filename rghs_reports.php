@@ -24,6 +24,33 @@ function rbars(array $rows, $cls='bar'){
 }
 function rml($ym){ $ts=strtotime($ym.'-01'); return $ts?date('M y',$ts):$ym; }
 
+/** SVG multi-series line chart. $series = [['label'=>..,'color'=>..,'pts'=>[y,y,..]], ..], $labels = x-axis. */
+function rline(array $labels, array $series){
+    if(!$labels){ echo '<p class="muted">Data nahi.</p>'; return; }
+    $W=760; $H=240; $pl=48; $pr=16; $pt=16; $pb=34; $iw=$W-$pl-$pr; $ih=$H-$pt-$pb;
+    $max=1; foreach($series as $s) foreach($s['pts'] as $v) $max=max($max,(float)$v);
+    $n=count($labels); $stepX = $n>1 ? $iw/($n-1) : 0;
+    $x=function($i)use($pl,$stepX){ return round($pl+$i*$stepX,1); };
+    $y=function($v)use($pt,$ih,$max){ return round($pt+$ih-($v/$max)*$ih,1); };
+    echo '<div class="tbl-scroll"><svg viewBox="0 0 '.$W.' '.$H.'" style="width:100%;min-width:520px;height:auto;font-family:inherit">';
+    // horizontal gridlines + y labels (4 steps)
+    for($g=0;$g<=4;$g++){ $gv=$max*$g/4; $gy=$y($gv);
+        echo '<line x1="'.$pl.'" y1="'.$gy.'" x2="'.($W-$pr).'" y2="'.$gy.'" stroke="var(--line)" stroke-width="1"/>';
+        $lbl=$gv>=100000?number_format($gv/100000,1).'L':($gv>=1000?round($gv/1000).'k':round($gv));
+        echo '<text x="'.($pl-6).'" y="'.($gy+4).'" text-anchor="end" font-size="10" fill="var(--muted)">'.e($lbl).'</text>';
+    }
+    // x labels (thinned to ~8)
+    $every=max(1,(int)ceil($n/8));
+    for($i=0;$i<$n;$i++){ if($i%$every) continue; echo '<text x="'.$x($i).'" y="'.($H-12).'" text-anchor="middle" font-size="10" fill="var(--muted)">'.e($labels[$i]).'</text>'; }
+    foreach($series as $s){ $d=''; for($i=0;$i<$n;$i++){ $d.=($i?' L':'M').$x($i).' '.$y((float)($s['pts'][$i]??0)); }
+        echo '<path d="'.$d.'" fill="none" stroke="'.e($s['color']).'" stroke-width="2.5" stroke-linejoin="round"/>';
+        for($i=0;$i<$n;$i++){ echo '<circle cx="'.$x($i).'" cy="'.$y((float)($s['pts'][$i]??0)).'" r="2.5" fill="'.e($s['color']).'"><title>'.e($labels[$i].' · '.$s['label'].': '.number_format((float)($s['pts'][$i]??0))).'</title></circle>'; }
+    }
+    echo '</svg></div><div class="legend">';
+    foreach($series as $s) echo '<span class="lg"><i style="background:'.e($s['color']).'"></i>'.e($s['label']).'</span>';
+    echo '</div>';
+}
+
 // yearly summary
 $yearly = $pdo->query("SELECT sub_year, COUNT(*) n, COALESCE(SUM(claim_amt),0) claim, COALESCE(SUM(cu_amt),0) cu,
     SUM(status LIKE '%APPROVED%' OR status LIKE '%Approved%') appn,
@@ -57,6 +84,28 @@ $shortfall = $sf['claim'] - $sf['cu'];
 // monthly submitted
 $monthly = $pdo->query("SELECT DATE_FORMAT(submit_date,'%Y-%m') ym, COUNT(*) n, COALESCE(SUM(claim_amt),0) amt FROM rghs_claims WHERE submit_date IS NOT NULL GROUP BY ym ORDER BY ym DESC LIMIT 15")->fetchAll();
 $monthly=array_reverse($monthly); $mBars=[]; foreach($monthly as $m) $mBars[]=[rml($m['ym']),(float)$m['amt']];
+
+// ---- trend (last 12 months): claimed vs approved(CU) vs received ----
+$trendClaim = $pdo->query("SELECT DATE_FORMAT(submit_date,'%Y-%m') ym, COUNT(*) n, COALESCE(SUM(claim_amt),0) claim, COALESCE(SUM(cu_amt),0) cu
+    FROM rghs_claims WHERE submit_date IS NOT NULL GROUP BY ym")->fetchAll();
+$trendPay = $pdo->query("SELECT DATE_FORMAT(payment_date,'%Y-%m') ym, COALESCE(SUM(paid_amount),0) paid
+    FROM rghs_claims WHERE payment_date IS NOT NULL GROUP BY ym")->fetchAll();
+$tc=[]; foreach($trendClaim as $r) $tc[$r['ym']]=$r; $tp=[]; foreach($trendPay as $r) $tp[$r['ym']]=(float)$r['paid'];
+$trLabels=[]; $trN=[]; $trClaim=[]; $trCu=[]; $trPaid=[];
+for($i=11;$i>=0;$i--){ $ym=date('Y-m', strtotime("first day of -$i month")); $trLabels[]=rml($ym);
+    $trN[]=(int)($tc[$ym]['n']??0); $trClaim[]=(float)($tc[$ym]['claim']??0); $trCu[]=(float)($tc[$ym]['cu']??0); $trPaid[]=(float)($tp[$ym]??0); }
+
+// ---- Financial-Year (Apr–Mar) statement ----
+$fyStart = "(YEAR(submit_date) - (MONTH(submit_date)<4))";
+$fyRows = $pdo->query("SELECT $fyStart fy, COUNT(*) n,
+        COALESCE(SUM(claim_amt),0) claim, COALESCE(SUM(cu_amt),0) cu,
+        SUM(status LIKE '%APPROVED%' OR status LIKE '%Approved%') appn,
+        SUM(status LIKE '%REJECT%' OR status LIKE '%Reject%') rejn
+    FROM rghs_claims WHERE submit_date IS NOT NULL GROUP BY fy ORDER BY fy DESC")->fetchAll();
+// received grouped by payment_date FY
+$fyPaid = [];
+foreach ($pdo->query("SELECT (YEAR(payment_date) - (MONTH(payment_date)<4)) fy, COALESCE(SUM(paid_amount),0) paid
+    FROM rghs_claims WHERE payment_date IS NOT NULL GROUP BY fy")->fetchAll() as $r) $fyPaid[(int)$r['fy']]=(float)$r['paid'];
 
 // payments
 $payAgg = $pdo->query("SELECT COUNT(*) total,
@@ -212,6 +261,37 @@ require __DIR__ . '/includes/header.php';
 </div>
 
 <div class="card">
+    <h2>🧾 Financial Year statement (Apr–Mar)</h2>
+    <table class="tbl">
+        <thead><tr><th>Financial Year</th><th class="r">Claims</th><th class="r">Approved</th><th class="r">Rejected</th><th class="r">Claimed</th><th class="r">CU Approved</th><th class="r">Received</th></tr></thead>
+        <tbody>
+        <?php foreach ($fyRows as $y): $fs=(int)$y['fy']; $recv=$fyPaid[$fs]??0; ?>
+            <tr><td><strong><?= $fs ?>–<?= substr((string)($fs+1),-2) ?></strong></td>
+                <td class="r"><?= number_format($y['n']) ?></td><td class="r"><?= number_format($y['appn']) ?></td>
+                <td class="r"><?= number_format($y['rejn']) ?></td><td class="r"><?= money($y['claim']) ?></td>
+                <td class="r"><?= money($y['cu']) ?></td><td class="r ok"><?= money($recv) ?></td></tr>
+        <?php endforeach; ?>
+        <?php if(!$fyRows): ?><tr><td colspan="7" class="muted">Data nahi.</td></tr><?php endif; ?>
+        </tbody>
+    </table>
+    <p class="muted small">Financial year = 1 April se 31 March. "Received" us FY me credit hue payment ke aadhar par.</p>
+</div>
+
+<div class="card">
+    <h2>📈 12-mahine trend — claimed vs approved vs received</h2>
+    <?php rline($trLabels, [
+        ['label'=>'Claimed','color'=>'#1B2F5E','pts'=>$trClaim],
+        ['label'=>'CU Approved','color'=>'#C9A227','pts'=>$trCu],
+        ['label'=>'Received','color'=>'#16A34A','pts'=>$trPaid],
+    ]); ?>
+</div>
+
+<div class="card">
+    <h2>📈 12-mahine trend — claim count</h2>
+    <?php rline($trLabels, [['label'=>'Claims submitted','color'=>'#1B2F5E','pts'=>$trN]]); ?>
+</div>
+
+<div class="card">
     <h2>💰 Payment Reconciliation</h2>
     <div class="stat-grid">
         <div class="stat-card ok"><div class="stat-num"><?= inr($recon['paid'],0) ?></div><div class="stat-lbl">Total received</div></div>
@@ -358,7 +438,7 @@ require __DIR__ . '/includes/header.php';
     <?php foreach ($dqRows as $d): $cls=$d[2]>25?'pill-rejected':($d[2]>5?'pill-process':'pill-settled'); ?>
         <tr><td><?= e($d[0]) ?></td><td class="r"><?= number_format($d[1]) ?></td><td class="r"><span class="pill <?= $cls ?>"><?= $d[2] ?>%</span></td></tr>
     <?php endforeach; ?>
-        <tr><td>Sambhavit duplicate (card+amount+date)</td><td class="r"><?= number_format($dupN) ?></td><td class="r"><span class="pill <?= $dupN>0?'pill-process':'pill-settled' ?>"><?= $dupN>0?'check karein':'clean' ?></span></td></tr>
+        <tr><td>Sambhavit duplicate (card+amount+date)</td><td class="r"><?= number_format($dupN) ?></td><td class="r"><?php if($dupN>0): ?><a class="link" href="<?= BASE_URL ?>/rghs_dupes.php?scheme=RGHS"><span class="pill pill-process">resolve karein →</span></a><?php else: ?><span class="pill pill-settled">clean</span><?php endif; ?></td></tr>
     </tbody></table>
 </div>
 

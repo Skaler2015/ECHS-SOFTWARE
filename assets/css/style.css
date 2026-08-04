@@ -148,6 +148,13 @@ body.sb-open .sb-backdrop{display:block}
 .pill-submitted,.pill-info{background:#DFF0F8;color:#1F6B8A}
 .pill-paid,.pill-settled{background:#ecfdf5;color:#047857}
 .pill-rejected{background:#fef2f2;color:#b91c1c}
+.pill-warn{background:#fffbeb;color:#a16207}
+.legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:8px;font-size:.8rem;color:var(--muted)}
+.legend .lg{display:inline-flex;align-items:center;gap:6px}
+.legend .lg i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.btn-sm{padding:4px 9px;font-size:.78rem}
+.btn-danger{background:#fef2f2;color:#b91c1c;border-color:#f3c9c9}
+.btn-danger:hover{background:#fee2e2}
 
 /* ---------- Search bar (page filters) ---------- */
 .searchbar{display:flex;gap:9px;margin-bottom:16px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--line);

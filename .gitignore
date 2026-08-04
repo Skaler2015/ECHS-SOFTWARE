@@ -9,3 +9,8 @@ Thumbs.db
 # Uploaded files (keep folder, ignore contents)
 uploads/*
 !uploads/index.html
+# keep the rghs upload folder + its access guards, ignore actual uploaded files
+!uploads/rghs
+uploads/rghs/*
+!uploads/rghs/.htaccess
+!uploads/rghs/index.php

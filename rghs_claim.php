@@ -46,6 +46,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('Note add ho gaya.');
         }
         redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
+    } elseif ($act === 'upload_doc') {
+        $who = current_user()['full_name'] ?? 'staff';
+        if (!empty($_FILES['doc']['name']) && $_FILES['doc']['error'] === UPLOAD_ERR_OK) {
+            $orig = (string)$_FILES['doc']['name'];
+            $size = (int)$_FILES['doc']['size'];
+            $ext  = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
+            $allowed = ['pdf','jpg','jpeg','png','webp','gif','doc','docx','xls','xlsx','csv','txt'];
+            if ($size > 15 * 1024 * 1024) {
+                flash('File 15MB se badi hai.', 'error');
+            } elseif (!in_array($ext, $allowed, true)) {
+                flash('Is type ki file allowed nahi ('.e($ext).').', 'error');
+            } else {
+                $dir = __DIR__ . '/uploads/rghs';
+                if (!is_dir($dir)) @mkdir($dir, 0775, true);
+                // access guards (deploy excludes this folder, so create them on the server at runtime)
+                if (!is_file($dir.'/.htaccess')) @file_put_contents($dir.'/.htaccess', "Deny from all\n");
+                if (!is_file($dir.'/index.php')) @file_put_contents($dir.'/index.php', "<?php // no listing\n");
+                $stored = bin2hex(random_bytes(16)) . ($ext ? '.'.$ext : '');
+                if (move_uploaded_file($_FILES['doc']['tmp_name'], $dir.'/'.$stored)) {
+                    $mime = function_exists('mime_content_type') ? (mime_content_type($dir.'/'.$stored) ?: null) : null;
+                    $pdo->prepare("INSERT INTO rghs_docs (tid,stored_name,orig_name,mime,bytes,who) VALUES (?,?,?,?,?,?)")
+                        ->execute([$tid, $stored, $orig, $mime, $size, $who]);
+                    rghs_log('doc_upload', $tid.' · '.$orig);
+                    flash('Document attach ho gaya.');
+                } else {
+                    flash('Upload fail hua.', 'error');
+                }
+            }
+        } else {
+            flash('Koi file select nahi ki.', 'error');
+        }
+        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
+    } elseif ($act === 'del_doc') {
+        $did = (int)($_POST['doc_id'] ?? 0);
+        $d = $pdo->prepare("SELECT stored_name FROM rghs_docs WHERE id=? AND tid=?");
+        $d->execute([$did, $tid]); $drow = $d->fetch();
+        if ($drow) {
+            @unlink(__DIR__ . '/uploads/rghs/' . basename($drow['stored_name']));
+            $pdo->prepare("DELETE FROM rghs_docs WHERE id=?")->execute([$did]);
+            flash('Document delete ho gaya.');
+        }
+        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
+    } elseif ($act === 'add_query') {
+        $q = trim($_POST['query_text'] ?? '');
+        $ro = trim($_POST['raised_on'] ?? '');
+        if ($q !== '') {
+            $who = current_user()['full_name'] ?? 'staff';
+            $pdo->prepare("INSERT INTO rghs_queries (tid,query_text,raised_on,status,who) VALUES (?,?,?, 'open', ?)")
+                ->execute([$tid, $q, $ro ?: null, $who]);
+            flash('Query add ho gayi.');
+        }
+        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
+    } elseif ($act === 'reply_query') {
+        $qid = (int)($_POST['query_id'] ?? 0);
+        $reply = trim($_POST['reply_text'] ?? '');
+        $close = !empty($_POST['close_q']);
+        $pdo->prepare("UPDATE rghs_queries SET reply_text=?, replied_on=CURDATE(), status=? WHERE id=? AND tid=?")
+            ->execute([$reply ?: null, $close ? 'closed' : 'replied', $qid, $tid]);
+        flash('Query update ho gayi.');
+        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
     }
 }
 
@@ -55,6 +115,12 @@ $hist->execute([$tid]); $history = $hist->fetchAll();
 $notesList = $pdo->prepare("SELECT * FROM rghs_notes WHERE tid=? ORDER BY id DESC");
 $notesList->execute([$tid]); $notesList = $notesList->fetchAll();
 $staff = rghs_staff_list();
+
+$docsList = $pdo->prepare("SELECT * FROM rghs_docs WHERE tid=? ORDER BY id DESC");
+$docsList->execute([$tid]); $docsList = $docsList->fetchAll();
+
+$queriesList = $pdo->prepare("SELECT * FROM rghs_queries WHERE tid=? ORDER BY id DESC");
+$queriesList->execute([$tid]); $queriesList = $queriesList->fetchAll();
 
 // payment record (from Payment Tracker upload), if any
 $pst = $pdo->prepare("SELECT * FROM rghs_payments WHERE tid=?");
@@ -196,6 +262,73 @@ require __DIR__ . '/includes/header.php';
             <?php endforeach; ?>
         </ul>
         <?php endif; ?>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="card">
+        <h2>📎 Documents <span class="muted small">(<?= count($docsList) ?>)</span></h2>
+        <form method="post" enctype="multipart/form-data" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+            <?= csrf_field() ?><input type="hidden" name="act" value="upload_doc">
+            <input type="file" name="doc" required style="flex:1;min-width:180px">
+            <button class="btn btn-primary">Upload</button>
+        </form>
+        <p class="muted small" style="margin-top:-6px">PDF, image, Word, Excel · max 15MB</p>
+        <?php if (!$docsList): ?><p class="muted small">Abhi koi document attach nahi.</p><?php else: ?>
+        <table class="tbl">
+            <thead><tr><th>File</th><th class="r">Size</th><th>Added</th><th></th></tr></thead>
+            <tbody>
+            <?php foreach ($docsList as $d): ?>
+                <tr>
+                    <td><a class="link" target="_blank" href="<?= BASE_URL ?>/api/rghs_doc.php?id=<?= (int)$d['id'] ?>"><?= e($d['orig_name']) ?></a></td>
+                    <td class="r small"><?= number_format($d['bytes']/1024, 0) ?> KB</td>
+                    <td class="small"><?= e(date('d-m-y', strtotime($d['uploaded_at']))) ?><br><span class="muted"><?= e($d['who']) ?></span></td>
+                    <td class="r">
+                        <a class="btn btn-sm" href="<?= BASE_URL ?>/api/rghs_doc.php?id=<?= (int)$d['id'] ?>&dl=1">⬇</a>
+                        <form method="post" style="display:inline" onsubmit="return confirm('Delete document?')">
+                            <?= csrf_field() ?><input type="hidden" name="act" value="del_doc"><input type="hidden" name="doc_id" value="<?= (int)$d['id'] ?>">
+                            <button class="btn btn-sm btn-danger">✕</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+    </div>
+    <div class="card">
+        <h2>❓ Query / Reply tracker</h2>
+        <form method="post" style="margin-bottom:12px">
+            <?= csrf_field() ?><input type="hidden" name="act" value="add_query">
+            <div class="fld"><label>RGHS ne kya query uthaayi?</label><textarea name="query_text" rows="2" required placeholder="Query likhein…"></textarea></div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <input type="date" name="raised_on" style="padding:9px 11px;border:1px solid var(--line);border-radius:9px">
+                <button class="btn btn-primary">Add query</button>
+            </div>
+        </form>
+        <?php if (!$queriesList): ?><p class="muted small">Koi query nahi.</p><?php else: foreach ($queriesList as $q):
+            $qcls = $q['status']==='closed'?'settled':($q['status']==='replied'?'process':'warn'); ?>
+        <div style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;gap:8px">
+                <strong class="small">Query</strong>
+                <span class="pill pill-<?= $qcls ?>"><?= e($q['status']) ?></span>
+            </div>
+            <p class="small" style="margin:6px 0"><?= nl2br(e($q['query_text'])) ?>
+                <?php if ($q['raised_on']): ?><span class="muted">· raised <?= fdate($q['raised_on']) ?></span><?php endif; ?></p>
+            <?php if (!empty($q['reply_text'])): ?>
+                <p class="small" style="margin:6px 0;padding-left:10px;border-left:3px solid var(--gold)"><strong>Reply:</strong> <?= nl2br(e($q['reply_text'])) ?>
+                    <?php if ($q['replied_on']): ?><span class="muted">· <?= fdate($q['replied_on']) ?></span><?php endif; ?></p>
+            <?php endif; ?>
+            <?php if ($q['status'] !== 'closed'): ?>
+            <form method="post" style="margin-top:6px">
+                <?= csrf_field() ?><input type="hidden" name="act" value="reply_query"><input type="hidden" name="query_id" value="<?= (int)$q['id'] ?>">
+                <textarea name="reply_text" rows="2" placeholder="Reply likhein…" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:9px"><?= e($q['reply_text']) ?></textarea>
+                <label class="inline" style="display:flex;gap:6px;align-items:center;margin:6px 0"><input type="checkbox" name="close_q" value="1"> Query close karein</label>
+                <button class="btn btn-sm btn-primary">Save reply</button>
+            </form>
+            <?php endif; ?>
+        </div>
+        <?php endforeach; endif; ?>
     </div>
 </div>
 
