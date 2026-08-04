@@ -64,8 +64,40 @@ function scheme_counts($scheme) {
     <h1 class="home-title">Namaste, <?= e($u['full_name']) ?> 👋</h1>
     <p class="home-sub">Apni scheme chunein — dono alag-alag modules hain.</p>
 
+    <?php
+    // precompute per-scheme counts (used by summary + tiles)
+    $countsByCode = [];
+    foreach ($SCHEMES as $code => $m) $countsByCode[$code] = scheme_counts($code);
+    $grandClaims = array_sum(array_column($countsByCode, 'patients'));
+    $grandAmount = array_sum(array_column($countsByCode, 'amount'));
+    // RGHS money picture (received / outstanding)
+    $rReceived = 0; $rOutstanding = 0;
+    try {
+        $rReceived = (float)db()->query("SELECT COALESCE(SUM(paid_amount),0) s FROM rghs_claims")->fetch()['s'];
+        $rOutstanding = (float)db()->query("SELECT COALESCE(SUM(cu_amt),0) s FROM rghs_claims WHERE (status LIKE '%APPROVED%' OR status LIKE '%Approved%') AND (paid_amount=0 OR paid_amount IS NULL) AND (payment_status IS NULL OR payment_status NOT LIKE '%PROCESS%')")->fetch()['s'];
+    } catch (Exception $e) {}
+    ?>
+    <div class="scheme-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:18px">
+        <div class="scheme-tile" style="--tile:#2563EB;cursor:default">
+            <div class="scheme-tile-title" style="font-size:1.4rem"><?= number_format($grandClaims) ?></div>
+            <div class="scheme-tile-name">Total claims (dono)</div>
+        </div>
+        <div class="scheme-tile" style="--tile:#7c3aed;cursor:default">
+            <div class="scheme-tile-title" style="font-size:1.2rem"><?= money($grandAmount) ?></div>
+            <div class="scheme-tile-name">Total claimed</div>
+        </div>
+        <div class="scheme-tile" style="--tile:#16A34A;cursor:default">
+            <div class="scheme-tile-title" style="font-size:1.2rem"><?= money($rReceived) ?></div>
+            <div class="scheme-tile-name">RGHS received</div>
+        </div>
+        <div class="scheme-tile" style="--tile:#DC2626;cursor:default">
+            <div class="scheme-tile-title" style="font-size:1.2rem"><?= money($rOutstanding) ?></div>
+            <div class="scheme-tile-name">RGHS outstanding</div>
+        </div>
+    </div>
+
     <div class="scheme-grid">
-        <?php foreach ($SCHEMES as $code => $m): $c = scheme_counts($code);
+        <?php foreach ($SCHEMES as $code => $m): $c = $countsByCode[$code];
               $tileUrl = ($code === 'ECHS') ? (BASE_URL.'/echs.php') : (BASE_URL.'/dashboard.php?scheme='.$code); ?>
         <a class="scheme-tile" href="<?= $tileUrl ?>" style="--tile:<?= e($m['color']) ?>">
             <div class="scheme-tile-icon"><?= e($m['icon']) ?></div>

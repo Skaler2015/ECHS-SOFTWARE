@@ -232,7 +232,77 @@ function rghs_ensure_table() {
         try { $pdo->exec("ALTER TABLE `rghs_payments` ADD INDEX `$idx` (`$col`)"); } catch (Exception $e) {}
     }
 
+    // doctors master
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_doctors` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `name` VARCHAR(160) NOT NULL UNIQUE,
+        `specialty` VARCHAR(120) NULL,
+        `phone` VARCHAR(40) NULL,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // follow-up tasks
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_tasks` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `tid` VARCHAR(40) NULL,
+        `title` VARCHAR(255) NOT NULL,
+        `due_date` DATE NULL,
+        `done` TINYINT(1) NOT NULL DEFAULT 0,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `done_at` DATETIME NULL,
+        KEY `idx_rt_done` (`done`), KEY `idx_rt_due` (`due_date`), KEY `idx_rt_tid` (`tid`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // daily backup snapshots (gzip-compressed full export, 20-day retention)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_backups` (
+        `snap_date` DATE NOT NULL PRIMARY KEY,
+        `payload` LONGBLOB NULL,
+        `claims_n` INT DEFAULT 0,
+        `payments_n` INT DEFAULT 0,
+        `bytes` INT DEFAULT 0,
+        `saved_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
     $done = true;
+}
+
+/** All known RGHS doctor names (master + used in claims). */
+function rghs_doctor_list() {
+    rghs_ensure_table();
+    $set = [];
+    try {
+        foreach (db()->query("SELECT name FROM rghs_doctors ORDER BY name") as $r) $set[$r['name']] = true;
+        foreach (db()->query("SELECT DISTINCT doctor_name FROM rghs_claims WHERE doctor_name IS NOT NULL AND doctor_name<>''") as $r) $set[$r['doctor_name']] = true;
+    } catch (Exception $e) {}
+    $out = array_keys($set); sort($out); return $out;
+}
+
+/** Build a full export array (claims + payments) for backup/download. */
+function rghs_export_all() {
+    rghs_ensure_table();
+    $pdo = db();
+    $claims = $pdo->query("SELECT * FROM rghs_claims")->fetchAll();
+    $payments = $pdo->query("SELECT * FROM rghs_payments")->fetchAll();
+    return ['app'=>'RGHS Tracker', 'exported_at'=>date('c'), 'claims'=>$claims, 'payments'=>$payments];
+}
+
+/** Ensure today's backup snapshot exists (best-effort; called from dashboard/backup page). */
+function rghs_daily_snapshot() {
+    rghs_ensure_table();
+    $pdo = db();
+    try {
+        $has = $pdo->query("SELECT 1 FROM rghs_backups WHERE snap_date = CURDATE()")->fetch();
+        if ($has) return false;
+        $data = rghs_export_all();
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE);
+        $gz = function_exists('gzencode') ? gzencode($json, 6) : $json;
+        $pdo->prepare("INSERT INTO rghs_backups (snap_date, payload, claims_n, payments_n, bytes)
+            VALUES (CURDATE(), ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE payload=VALUES(payload), claims_n=VALUES(claims_n), payments_n=VALUES(payments_n), bytes=VALUES(bytes), saved_at=NOW()")
+            ->execute([$gz, count($data['claims']), count($data['payments']), strlen($gz)]);
+        $pdo->prepare("DELETE FROM rghs_backups WHERE snap_date < (CURDATE() - INTERVAL 20 DAY)")->execute();
+        return true;
+    } catch (Exception $e) { return false; }
 }
 
 /**

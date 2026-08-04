@@ -10,6 +10,24 @@ $pdo = db();
 
 $total = (int)$pdo->query("SELECT COUNT(*) n FROM rghs_claims")->fetch()['n'];
 
+// keep a daily safety snapshot (best-effort, once per day)
+if ($total > 0) { @rghs_daily_snapshot(); }
+
+// alerts
+$alerts = [];
+if ($total > 0) {
+    $au = $pdo->query("SELECT COUNT(*) n, COALESCE(SUM(cu_amt),0) amt FROM rghs_claims
+        WHERE (status LIKE '%APPROVED%' OR status LIKE '%Approved%') AND (paid_amount=0 OR paid_amount IS NULL)
+        AND (payment_status IS NULL OR payment_status NOT LIKE '%PROCESS%')")->fetch();
+    if ($au['n'] > 0) $alerts[] = ['warn', number_format($au['n']).' claims approved par paisa baaki', money($au['amt']), BASE_URL.'/rghs_reports.php?scheme=RGHS'];
+    $qold = $pdo->query("SELECT COUNT(*) n FROM rghs_claims WHERE (status LIKE '%QUER%' OR status LIKE '%PENDING WITH%' OR status LIKE '%Pending with%')
+        AND submit_date IS NOT NULL AND DATEDIFF(CURDATE(),submit_date) > 15")->fetch()['n'];
+    if ($qold > 0) $alerts[] = ['danger', $qold.' query/stuck claims 15+ din se', 'action lena hai', BASE_URL.'/rghs_reports.php?scheme=RGHS'];
+    $odtask = 0;
+    try { $odtask = (int)$pdo->query("SELECT COUNT(*) n FROM rghs_tasks WHERE done=0 AND due_date IS NOT NULL AND due_date < CURDATE()")->fetch()['n']; } catch (Exception $e) {}
+    if ($odtask > 0) $alerts[] = ['danger', $odtask.' task overdue', '', BASE_URL.'/rghs_tasks.php?scheme=RGHS'];
+}
+
 if ($total === 0) {
     require __DIR__ . '/header.php'; ?>
     <div class="page-head"><h1>🏥 RGHS Dashboard</h1></div>
@@ -80,6 +98,20 @@ require __DIR__ . '/header.php';
         <a class="btn" href="<?= BASE_URL ?>/rghs_reports.php?scheme=RGHS">📊 Reports</a>
     </div>
 </div>
+
+<?php if ($alerts): ?>
+<div class="card" style="border-left:4px solid var(--warn)">
+    <h2>🔔 Dhyan dein</h2>
+    <div style="display:flex;flex-direction:column;gap:8px">
+    <?php foreach ($alerts as $a): ?>
+        <a href="<?= $a[3] ?>" class="dd-item" style="display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;text-decoration:none">
+            <span><span class="pill pill-<?= $a[0]==='danger'?'rejected':'process' ?>" style="margin-right:8px"><?= $a[0]==='danger'?'!':'•' ?></span><?= e($a[1]) ?></span>
+            <strong><?= e($a[2]) ?></strong>
+        </a>
+    <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="stat-grid">
     <div class="stat-card"><div class="stat-num"><?= number_format($total) ?></div><div class="stat-lbl">Total claims</div></div>

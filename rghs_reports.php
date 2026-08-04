@@ -70,6 +70,45 @@ $payMonthly = $pdo->query("SELECT DATE_FORMAT(credit_date,'%Y-%m') ym, COALESCE(
     FROM rghs_payments WHERE final_status LIKE '%SUCCESS%' AND credit_date IS NOT NULL GROUP BY ym ORDER BY ym DESC LIMIT 15")->fetchAll();
 $payMonthly = array_reverse($payMonthly); $payBars=[]; foreach($payMonthly as $m) $payBars[]=[rml($m['ym']),(float)$m['amt']];
 
+// ---- payment reconciliation / outstanding ----
+$recon = $pdo->query("SELECT
+        COALESCE(SUM(cu_amt),0) approved,
+        COALESCE(SUM(paid_amount),0) paid,
+        SUM(CASE WHEN (status LIKE '%APPROVED%' OR status LIKE '%Approved%') AND (paid_amount=0 OR paid_amount IS NULL) AND (payment_status IS NULL OR payment_status NOT LIKE '%PROCESS%') THEN 1 ELSE 0 END) unpaid_n,
+        COALESCE(SUM(CASE WHEN (status LIKE '%APPROVED%' OR status LIKE '%Approved%') AND (paid_amount=0 OR paid_amount IS NULL) AND (payment_status IS NULL OR payment_status NOT LIKE '%PROCESS%') THEN cu_amt ELSE 0 END),0) unpaid_amt,
+        SUM(CASE WHEN paid_amount>0 AND cu_amt>0 AND paid_amount < cu_amt-1 THEN 1 ELSE 0 END) short_n,
+        COALESCE(SUM(CASE WHEN paid_amount>0 AND cu_amt>0 AND paid_amount < cu_amt-1 THEN (cu_amt-paid_amount) ELSE 0 END),0) short_amt
+    FROM rghs_claims")->fetch();
+
+// approved-but-unpaid aging (by CU action date, fallback submit date)
+$unpaidAging = [];
+foreach ([['0-30','BETWEEN 0 AND 30'],['31-60','BETWEEN 31 AND 60'],['61-90','BETWEEN 61 AND 90'],['90+','> 90']] as $b) {
+    $x = $pdo->query("SELECT COUNT(*) n, COALESCE(SUM(cu_amt),0) amt FROM rghs_claims
+        WHERE (status LIKE '%APPROVED%' OR status LIKE '%Approved%') AND (paid_amount=0 OR paid_amount IS NULL)
+        AND (payment_status IS NULL OR payment_status NOT LIKE '%PROCESS%')
+        AND COALESCE(cu_action_date,submit_date) IS NOT NULL
+        AND DATEDIFF(CURDATE(),COALESCE(cu_action_date,submit_date)) {$b[1]}")->fetch();
+    $unpaidAging[] = [$b[0].' din',(int)$x['n'],(float)$x['amt']];
+}
+// top approved-unpaid claims
+$unpaidTop = $pdo->query("SELECT tid,patient_name,cu_amt,status,COALESCE(cu_action_date,submit_date) d,
+        DATEDIFF(CURDATE(),COALESCE(cu_action_date,submit_date)) age
+    FROM rghs_claims WHERE (status LIKE '%APPROVED%' OR status LIKE '%Approved%') AND (paid_amount=0 OR paid_amount IS NULL)
+        AND (payment_status IS NULL OR payment_status NOT LIKE '%PROCESS%')
+    ORDER BY cu_amt DESC LIMIT 50")->fetchAll();
+
+// query / stuck claims aging (pending with TPA/CU or queried)
+$queryAging = [];
+foreach ([['0-15','BETWEEN 0 AND 15'],['16-30','BETWEEN 16 AND 30'],['31-60','BETWEEN 31 AND 60'],['60+','> 60']] as $b) {
+    $x = $pdo->query("SELECT COUNT(*) n FROM rghs_claims
+        WHERE (status LIKE '%QUER%' OR status LIKE '%PENDING WITH%' OR status LIKE '%Pending with%')
+        AND submit_date IS NOT NULL AND DATEDIFF(CURDATE(),submit_date) {$b[1]}")->fetch();
+    $queryAging[] = [$b[0].' din',(int)$x['n']];
+}
+$queryTop = $pdo->query("SELECT tid,patient_name,status,query_status,claim_amt,submit_date,DATEDIFF(CURDATE(),submit_date) age
+    FROM rghs_claims WHERE (status LIKE '%QUER%' OR status LIKE '%PENDING WITH%' OR status LIKE '%Pending with%')
+    AND submit_date IS NOT NULL ORDER BY submit_date ASC LIMIT 50")->fetchAll();
+
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="page-head">
@@ -109,6 +148,64 @@ require __DIR__ . '/includes/header.php';
         </tbody>
     </table>
 </div>
+
+<div class="card">
+    <h2>💰 Payment Reconciliation</h2>
+    <div class="stat-grid">
+        <div class="stat-card ok"><div class="stat-num"><?= inr($recon['paid'],0) ?></div><div class="stat-lbl">Total received</div></div>
+        <div class="stat-card danger"><div class="stat-num"><?= inr($recon['unpaid_amt'],0) ?></div><div class="stat-lbl">Approved par baaki (<?= number_format($recon['unpaid_n']) ?>)</div></div>
+        <div class="stat-card warn"><div class="stat-num"><?= inr($recon['short_amt'],0) ?></div><div class="stat-lbl">Short-paid (<?= number_format($recon['short_n']) ?> claims)</div></div>
+    </div>
+    <p class="muted small">Approved par baaki = jo claims approve ho gaye par abhi paisa nahi aaya (aur in-process bhi nahi).</p>
+</div>
+
+<div class="detail-grid">
+    <div class="card">
+        <h2>Outstanding — approved but unpaid (aging)</h2>
+        <table class="tbl"><thead><tr><th>Bucket</th><th class="r">Claims</th><th class="r">Amount</th></tr></thead><tbody>
+        <?php foreach ($unpaidAging as $a): ?><tr><td><?= e($a[0]) ?></td><td class="r"><?= number_format($a[1]) ?></td><td class="r"><?= money($a[2]) ?></td></tr><?php endforeach; ?>
+        </tbody></table>
+    </div>
+    <div class="card">
+        <h2>Query / stuck claims (aging)</h2>
+        <table class="tbl"><thead><tr><th>Bucket</th><th class="r">Claims</th></tr></thead><tbody>
+        <?php foreach ($queryAging as $a): ?><tr><td><?= e($a[0]) ?></td><td class="r"><?= number_format($a[1]) ?></td></tr><?php endforeach; ?>
+        </tbody></table>
+        <p class="muted small">Queried ya "pending with TPA/CU" claims — jitne purane utne zaroori.</p>
+    </div>
+</div>
+
+<?php if ($unpaidTop): ?>
+<div class="card">
+    <h2>Top approved-but-unpaid claims</h2>
+    <div class="tbl-scroll"><table class="tbl">
+        <thead><tr><th>TID</th><th>Patient</th><th>Status</th><th class="r">Approved</th><th class="r">Age</th></tr></thead>
+        <tbody>
+        <?php foreach ($unpaidTop as $r): $ac=$r['age']>90?'style="color:#dc3545;font-weight:600"':''; ?>
+            <tr><td><a class="link" href="<?= BASE_URL ?>/rghs_claim.php?scheme=RGHS&tid=<?= urlencode($r['tid']) ?>"><?= e($r['tid']) ?></a></td>
+                <td><?= e($r['patient_name']) ?></td><td class="small"><?= e($r['status']) ?></td>
+                <td class="r"><?= inr($r['cu_amt'],0) ?></td><td class="r" <?= $ac ?>><?= (int)$r['age'] ?>d</td></tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table></div>
+</div>
+<?php endif; ?>
+
+<?php if ($queryTop): ?>
+<div class="card">
+    <h2>Query / stuck claims — sabse purane</h2>
+    <div class="tbl-scroll"><table class="tbl">
+        <thead><tr><th>TID</th><th>Patient</th><th>Status</th><th>Query</th><th class="r">Age</th></tr></thead>
+        <tbody>
+        <?php foreach ($queryTop as $r): $ac=$r['age']>30?'style="color:#dc3545;font-weight:600"':''; ?>
+            <tr><td><a class="link" href="<?= BASE_URL ?>/rghs_claim.php?scheme=RGHS&tid=<?= urlencode($r['tid']) ?>"><?= e($r['tid']) ?></a></td>
+                <td><?= e($r['patient_name']) ?></td><td class="small"><?= e($r['status']) ?></td><td class="small"><?= e($r['query_status']) ?></td>
+                <td class="r" <?= $ac ?>><?= (int)$r['age'] ?>d</td></tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table></div>
+</div>
+<?php endif; ?>
 
 <div class="card"><h2>Monthly — submitted claim amount</h2><?php rbars($mBars); ?></div>
 

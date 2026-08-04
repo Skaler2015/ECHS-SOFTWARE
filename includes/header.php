@@ -46,10 +46,16 @@ if ($scheme === 'ECHS') {
         ['grp' => 'Main', 'items' => [
             ['k'=>'dashboard','t'=>'Dashboard','i'=>'dashboard','u'=>BASE_URL.'/dashboard.php?scheme=RGHS'],
             ['k'=>'claims','t'=>'Claims','i'=>'file','u'=>BASE_URL.'/rghs_claims.php?scheme=RGHS'],
+            ['k'=>'tasks','t'=>'Tasks','i'=>'checks','u'=>BASE_URL.'/rghs_tasks.php?scheme=RGHS'],
+        ]],
+        ['grp' => 'Lookup', 'items' => [
+            ['k'=>'patients','t'=>'Patient / Card','i'=>'patients','u'=>BASE_URL.'/rghs_patient.php?scheme=RGHS'],
+            ['k'=>'doctors','t'=>'Doctors','i'=>'patients','u'=>BASE_URL.'/rghs_doctors.php?scheme=RGHS'],
         ]],
         ['grp' => 'Data', 'items' => [
             ['k'=>'reports','t'=>'Reports','i'=>'chart','u'=>BASE_URL.'/rghs_reports.php?scheme=RGHS'],
             ['k'=>'upload','t'=>'Upload Excel','i'=>'upload','u'=>BASE_URL.'/rghs_upload.php?scheme=RGHS'],
+            ['k'=>'backup','t'=>'Data Safety','i'=>'database','u'=>BASE_URL.'/rghs_backup.php?scheme=RGHS'],
         ]],
         ['grp' => 'Account', 'items' => [
             ['k'=>'settings','t'=>'Settings','i'=>'settings','u'=>BASE_URL.'/settings.php'],
