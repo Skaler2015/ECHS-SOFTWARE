@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // force-refresh today's snapshot with current data
         $pdo->prepare("DELETE FROM rghs_backups WHERE snap_date = CURDATE()")->execute();
         rghs_daily_snapshot();
-        flash('Aaj ka backup snapshot ban gaya.');
+        rghs_log('backup_snapshot','manual'); flash('Aaj ka backup snapshot ban gaya.');
         redirect(BASE_URL . '/rghs_backup.php?scheme=RGHS');
     }
     if ($act === 'restore' && $isAdmin) {
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $nc = upsert_rows($pdo, 'rghs_claims', $data['claims'] ?? []);
                 $np = upsert_rows($pdo, 'rghs_payments', $data['payments'] ?? []);
                 $pdo->commit();
-                flash("$date se data restore ho gaya (claims $nc, payments $np).");
+                rghs_log('restore',"$date (claims $nc, payments $np)"); flash("$date se data restore ho gaya (claims $nc, payments $np).");
             } else { flash('Us date ka snapshot nahi mila.', 'error'); }
         } else { flash('Galat date.', 'error'); }
         redirect(BASE_URL . '/rghs_backup.php?scheme=RGHS');

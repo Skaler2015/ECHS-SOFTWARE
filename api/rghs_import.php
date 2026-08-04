@@ -100,6 +100,7 @@ if ($kind === 'payments') {
         try {
             $pdo->prepare("INSERT INTO rghs_uploads (filename, kind, rows_read, inserted, updated) VALUES (?,?,?,?,?)")
                 ->execute([mb_substr((string)($body['filename'] ?? 'payments'), 0, 200), 'payments', count($recs), $ins, $upd]);
+            rghs_log('upload_payments', ($body['filename'] ?? 'payments').": +$ins new, $upd upd");
         } catch (Exception $e) {}
     }
     echo json_encode(['ok'=>true, 'read'=>count($recs), 'inserted'=>$ins, 'updated'=>$upd, 'changed'=>0]);
@@ -203,6 +204,7 @@ if (!empty($body['first'])) {
     try {
         $pdo->prepare("INSERT INTO rghs_uploads (filename, kind, rows_read, inserted, updated) VALUES (?,?,?,?,?)")
             ->execute([mb_substr((string)($body['filename'] ?? 'upload'), 0, 200), 'claims', count($rowsData), $inserted, $updated]);
+        rghs_log('upload_claims', ($body['filename'] ?? 'upload').": +$inserted new, $updated upd");
     } catch (Exception $e) {}
 }
 

@@ -58,6 +58,7 @@ if ($scheme === 'ECHS') {
             ['k'=>'backup','t'=>'Data Safety','i'=>'database','u'=>BASE_URL.'/rghs_backup.php?scheme=RGHS'],
         ]],
         ['grp' => 'Account', 'items' => [
+            ['k'=>'activity','t'=>'Activity Log','i'=>'chart','u'=>BASE_URL.'/rghs_activity.php?scheme=RGHS'],
             ['k'=>'settings','t'=>'Settings','i'=>'settings','u'=>BASE_URL.'/settings.php'],
         ]],
     ];

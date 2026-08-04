@@ -253,6 +253,16 @@ function rghs_ensure_table() {
         KEY `idx_rt_done` (`done`), KEY `idx_rt_due` (`due_date`), KEY `idx_rt_tid` (`tid`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+    // activity / audit log
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_activity` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `who` VARCHAR(120) NULL,
+        `action` VARCHAR(80) NULL,
+        `detail` VARCHAR(255) NULL,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY `idx_ra_created` (`created_at`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
     // daily backup snapshots (gzip-compressed full export, 20-day retention)
     $pdo->exec("CREATE TABLE IF NOT EXISTS `rghs_backups` (
         `snap_date` DATE NOT NULL PRIMARY KEY,
@@ -264,6 +274,16 @@ function rghs_ensure_table() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
     $done = true;
+}
+
+/** Log an RGHS activity row (best effort). */
+function rghs_log($action, $detail = '') {
+    try {
+        rghs_ensure_table();
+        $u = function_exists('current_user') ? (current_user()['full_name'] ?? 'system') : 'system';
+        db()->prepare("INSERT INTO rghs_activity (who,action,detail) VALUES (?,?,?)")
+            ->execute([$u, $action, mb_substr((string)$detail, 0, 255)]);
+    } catch (Exception $e) {}
 }
 
 /** All known RGHS doctor names (master + used in claims). */
@@ -395,6 +415,13 @@ function rghs_build_filter(array $g) {
     if ($pay === 'paid')      $where[] = "paid_amount > 0 AND (payment_status IS NULL OR payment_status LIKE '%SUCCESS%')";
     elseif ($pay === 'process') $where[] = "payment_status LIKE '%PROCESS%'";
     elseif ($pay === 'unpaid') $where[] = "(paid_amount = 0 OR paid_amount IS NULL) AND (payment_status IS NULL OR payment_status NOT LIKE '%PROCESS%')";
+
+    $flag = trim($g['flag'] ?? '');
+    if ($flag === 'nodoctor') $where[] = "(doctor_name IS NULL OR doctor_name = '')";
+    elseif ($flag === 'followup') $where[] = "followup = 1";
+
+    $age = trim($g['age'] ?? '');
+    if ($age !== '' && ctype_digit($age)) { $where[] = "submit_date IS NOT NULL AND DATEDIFF(CURDATE(),submit_date) > ?"; $args[] = (int)$age; }
 
     return [$where ? ('WHERE ' . implode(' AND ', $where)) : '', $args];
 }

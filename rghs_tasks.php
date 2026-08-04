@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($title !== '') {
             $pdo->prepare("INSERT INTO rghs_tasks (tid,title,due_date) VALUES (?,?,?)")
                 ->execute([trim($_POST['tid'] ?? '') ?: null, $title, trim($_POST['due_date'] ?? '') ?: null]);
-            flash('Task add ho gaya.');
+            rghs_log('task_add',$title); flash('Task add ho gaya.');
         }
     } elseif ($act === 'done') {
         $pdo->prepare("UPDATE rghs_tasks SET done=1, done_at=NOW() WHERE id=?")->execute([(int)($_POST['id'] ?? 0)]);

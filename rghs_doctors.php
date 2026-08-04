@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare("INSERT INTO rghs_doctors (name,specialty,phone) VALUES (?,?,?)
                     ON DUPLICATE KEY UPDATE specialty=VALUES(specialty), phone=VALUES(phone)")
                     ->execute([$name, trim($_POST['specialty'] ?? '') ?: null, trim($_POST['phone'] ?? '') ?: null]);
-                flash('Doctor add ho gaya.');
+                rghs_log('doctor_add',$name); flash('Doctor add ho gaya.');
             } catch (Exception $e) { flash('Error: '.$e->getMessage(),'error'); }
         }
     } elseif ($act === 'rename') {
@@ -33,13 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             catch (Exception $e) { $pdo->prepare("DELETE FROM rghs_doctors WHERE name=?")->execute([$old]); }
             $pdo->prepare("INSERT IGNORE INTO rghs_doctors (name) VALUES (?)")->execute([$new]);
             $pdo->commit();
-            flash("'$old' → '$new' ho gaya ($cnt claims update).");
+            rghs_log('doctor_rename',"$old -> $new ($cnt)"); flash("'$old' → '$new' ho gaya ($cnt claims update).");
         }
     } elseif ($act === 'del') {
         $name = trim($_POST['name'] ?? ''); $clear = !empty($_POST['clear_claims']);
         $pdo->prepare("DELETE FROM rghs_doctors WHERE name=?")->execute([$name]);
         if ($clear) $pdo->prepare("UPDATE rghs_claims SET doctor_name=NULL WHERE doctor_name=?")->execute([$name]);
-        flash("Doctor '$name' hata diya".($clear?' (claims se bhi)':'').'.');
+        rghs_log('doctor_del',$name.($clear?' +cleared':'')); flash("Doctor '$name' hata diya".($clear?' (claims se bhi)':'').'.');
     }
     redirect(BASE_URL.'/rghs_doctors.php?scheme=RGHS');
 }

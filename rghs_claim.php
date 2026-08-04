@@ -58,7 +58,11 @@ require __DIR__ . '/includes/header.php';
 ?>
 <div class="page-head">
     <h1>Claim <?= e($c['tid']) ?></h1>
-    <div class="page-actions"><a class="btn" href="<?= BASE_URL ?>/rghs_claims.php?scheme=RGHS">← All Claims</a></div>
+    <div class="page-actions">
+        <a class="btn" target="_blank" href="<?= BASE_URL ?>/rghs_claim_print.php?scheme=RGHS&tid=<?= urlencode($tid) ?>">🖨️ Print</a>
+        <a class="btn" href="<?= BASE_URL ?>/rghs_tasks.php?scheme=RGHS&tid=<?= urlencode($tid) ?>">✔ Follow-up</a>
+        <a class="btn" href="<?= BASE_URL ?>/rghs_claims.php?scheme=RGHS">← All Claims</a>
+    </div>
 </div>
 
 <div class="stat-grid">

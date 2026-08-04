@@ -11,6 +11,41 @@ $active = 'claims';
 $page_title = 'RGHS Claims';
 $pdo = db();
 
+// ---- bulk actions ----
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_check();
+    $act  = $_POST['act'] ?? '';
+    $tids = array_values(array_filter((array)($_POST['tids'] ?? []), 'strlen'));
+    $ret  = $_POST['return'] ?? (BASE_URL.'/rghs_claims.php?scheme=RGHS');
+    if ($tids) {
+        $in = implode(',', array_fill(0, count($tids), '?'));
+        if ($act === 'setdoctor') {
+            $doc = trim($_POST['doctor_name'] ?? '');
+            $stmt = $pdo->prepare("UPDATE rghs_claims SET doctor_name=?, doctor_manual=1, updated_at=NOW() WHERE tid IN ($in)");
+            $stmt->execute(array_merge([$doc ?: null], $tids));
+            if ($doc !== '') { try { $pdo->prepare("INSERT IGNORE INTO rghs_doctors (name) VALUES (?)")->execute([$doc]); } catch (Exception $e) {} }
+            rghs_log('bulk_setdoctor', count($tids)." claims -> ".$doc);
+            flash(count($tids)." claims me doctor set ho gaya.");
+        } elseif ($act === 'flag') {
+            $pdo->prepare("UPDATE rghs_claims SET followup=1 WHERE tid IN ($in)")->execute($tids);
+            rghs_log('bulk_flag', count($tids).' claims');
+            flash(count($tids)." claims flag ho gaye.");
+        } elseif ($act === 'unflag') {
+            $pdo->prepare("UPDATE rghs_claims SET followup=0 WHERE tid IN ($in)")->execute($tids);
+            flash(count($tids)." claims ka flag hata.");
+        } elseif ($act === 'addtask') {
+            $title = trim($_POST['title'] ?? ''); $due = trim($_POST['due_date'] ?? '') ?: null;
+            if ($title !== '') {
+                $ins = $pdo->prepare("INSERT INTO rghs_tasks (tid,title,due_date) VALUES (?,?,?)");
+                foreach ($tids as $t) $ins->execute([$t, $title, $due]);
+                rghs_log('bulk_task', count($tids)." claims: ".$title);
+                flash(count($tids)." claims ke liye task ban gaya.");
+            }
+        }
+    }
+    redirect($ret);
+}
+
 [$where, $args] = rghs_build_filter($_GET);
 
 // sorting
@@ -56,8 +91,19 @@ require __DIR__ . '/includes/header.php';
     <h1>RGHS Claims</h1>
     <div class="page-actions">
         <a class="btn" href="<?= BASE_URL ?>/rghs_upload.php?scheme=RGHS">⬆ Upload</a>
+        <a class="btn" href="<?= BASE_URL ?>/api/rghs_export_xls.php?<?= http_build_query(array_merge($_GET,['scheme'=>'RGHS'])) ?>">⬇ Excel</a>
         <a class="btn" href="<?= BASE_URL ?>/api/rghs_export_csv.php?<?= http_build_query(array_merge($_GET,['scheme'=>'RGHS'])) ?>">⬇ CSV</a>
     </div>
+</div>
+
+<?php $Y = date('Y'); ?>
+<div class="chips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    <a class="chip" href="<?= qs(['cat'=>'approved','pay'=>'unpaid','age'=>null,'flag'=>null,'page'=>1]) ?>">💰 Approved par unpaid</a>
+    <a class="chip" href="<?= qs(['cat'=>'approved','pay'=>'unpaid','age'=>90,'page'=>1]) ?>">⏰ 90+ din unpaid</a>
+    <a class="chip" href="<?= qs(['cat'=>'query','pay'=>null,'age'=>null,'flag'=>null,'page'=>1]) ?>">❓ Query/stuck</a>
+    <a class="chip" href="<?= qs(['flag'=>'nodoctor','cat'=>null,'pay'=>null,'age'=>null,'page'=>1]) ?>">🩺 Bina doctor</a>
+    <a class="chip" href="<?= qs(['flag'=>'followup','cat'=>null,'pay'=>null,'age'=>null,'page'=>1]) ?>">🚩 Follow-up</a>
+    <a class="chip" href="<?= qs(['year'=>$Y,'cat'=>null,'pay'=>null,'age'=>null,'flag'=>null,'page'=>1]) ?>">📅 <?= $Y ?></a>
 </div>
 
 <div class="tabs">
@@ -100,13 +146,34 @@ require __DIR__ . '/includes/header.php';
     <p class="muted small">Doctor filter: <strong><?= e($_GET['doctor']) ?></strong> · <a class="link" href="<?= qs(['doctor'=>null]) ?>">hataayein</a></p>
 <?php endif; ?>
 
+<?php $curUrl = qs([]); $docList = rghs_doctor_list(); ?>
+<datalist id="docs"><?php foreach ($docList as $d): ?><option value="<?= e($d) ?>"><?php endforeach; ?></datalist>
+
+<form method="post" id="bulkForm">
+<?= csrf_field() ?>
+<input type="hidden" name="act" id="bulkAct" value="">
+<input type="hidden" name="return" value="<?= e($curUrl) ?>">
+
 <div class="card">
-    <div class="muted small" style="margin-bottom:8px">
-        <?= number_format($totCount) ?> claims · Claimed <?= money($agg['claim']) ?> · Approved(CU) <?= money($agg['cu']) ?>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        <div class="muted small">
+            <?= number_format($totCount) ?> claims · Claimed <?= money($agg['claim']) ?> · Approved(CU) <?= money($agg['cu']) ?>
+        </div>
+        <div id="bulkBar" class="muted small" style="display:none;align-items:center;gap:8px;flex-wrap:wrap">
+            <strong><span id="selCount">0</span> selected:</strong>
+            <input list="docs" id="bulkDoc" placeholder="Doctor naam" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px">
+            <button type="button" class="btn btn-light" onclick="bulk('setdoctor')">Set doctor</button>
+            <button type="button" class="btn btn-light" onclick="bulk('flag')">🚩 Flag</button>
+            <button type="button" class="btn btn-light" onclick="bulk('unflag')">Unflag</button>
+            <input id="bulkTitle" placeholder="Task title" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px">
+            <input id="bulkDue" type="date" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px">
+            <button type="button" class="btn btn-light" onclick="bulk('addtask')">+ Task</button>
+        </div>
     </div>
     <div class="tbl-scroll">
     <table class="tbl">
         <thead><tr>
+            <th style="width:28px"><input type="checkbox" id="selAll" onclick="toggleAll(this)"></th>
             <th><?= sortLink('tid','TID') ?></th>
             <th><?= sortLink('patient_name','Patient') ?></th>
             <th>Type</th>
@@ -119,9 +186,10 @@ require __DIR__ . '/includes/header.php';
         </tr></thead>
         <tbody>
         <?php if (!$rows): ?>
-            <tr><td colspan="9" class="muted" style="text-align:center;padding:24px">Kuch nahi mila.</td></tr>
+            <tr><td colspan="10" class="muted" style="text-align:center;padding:24px">Kuch nahi mila.</td></tr>
         <?php else: foreach ($rows as $c): ?>
             <tr>
+                <td><input type="checkbox" class="rowchk" name="tids[]" value="<?= e($c['tid']) ?>" onclick="updSel()"></td>
                 <td><a class="link" href="<?= BASE_URL ?>/rghs_claim.php?scheme=RGHS&tid=<?= urlencode($c['tid']) ?>"><?= e($c['tid']) ?></a></td>
                 <td><?= e($c['patient_name'] ?: '-') ?><div class="muted small"><?= e($c['card_no']) ?></div></td>
                 <td class="small"><?= e($c['claim_type'] ?: '-') ?></td>
@@ -149,5 +217,27 @@ require __DIR__ . '/includes/header.php';
     </div>
     <?php endif; ?>
 </div>
+</form>
+
+<script>
+function selected(){ return Array.prototype.slice.call(document.querySelectorAll('.rowchk:checked')); }
+function updSel(){
+    var n = selected().length;
+    document.getElementById('selCount').textContent = n;
+    document.getElementById('bulkBar').style.display = n>0 ? 'flex' : 'none';
+}
+function toggleAll(cb){ document.querySelectorAll('.rowchk').forEach(function(c){ c.checked = cb.checked; }); updSel(); }
+function bulk(act){
+    if (!selected().length){ alert('Pehle kuch claims select karein.'); return; }
+    if (act==='setdoctor'){ var d=document.getElementById('bulkDoc').value.trim(); if(!d){alert('Doctor naam daalein.');return;}
+        addHidden('doctor_name', d); }
+    if (act==='addtask'){ var t=document.getElementById('bulkTitle').value.trim(); if(!t){alert('Task title daalein.');return;}
+        addHidden('title', t); addHidden('due_date', document.getElementById('bulkDue').value); }
+    if (act==='unflag' && !confirm('Selected claims ka follow-up flag hataayein?')) return;
+    document.getElementById('bulkAct').value = act;
+    document.getElementById('bulkForm').submit();
+}
+function addHidden(name,val){ var i=document.createElement('input'); i.type='hidden'; i.name=name; i.value=val; document.getElementById('bulkForm').appendChild(i); }
+</script>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
