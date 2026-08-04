@@ -203,10 +203,10 @@ require __DIR__ . '/includes/header.php';
         <tbody>
         <?php if (!$rows): ?>
             <tr><td colspan="10" class="muted" style="text-align:center;padding:24px">Kuch nahi mila.</td></tr>
-        <?php else: foreach ($rows as $c): ?>
-            <tr>
+        <?php else: foreach ($rows as $c): $openUrl = BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($c['tid']); ?>
+            <tr class="clk" data-href="<?= e($openUrl) ?>" style="cursor:pointer">
                 <td><input type="checkbox" class="rowchk" name="tids[]" value="<?= e($c['tid']) ?>" onclick="updSel()"></td>
-                <td><a class="link" href="<?= BASE_URL ?>/rghs_claim.php?scheme=RGHS&tid=<?= urlencode($c['tid']) ?>"><?= e($c['tid']) ?></a></td>
+                <td><a class="link" style="color:var(--brand);text-decoration:underline" href="<?= e($openUrl) ?>"><?= e($c['tid']) ?></a></td>
                 <td><?= e($c['patient_name'] ?: '-') ?><div class="muted small"><?= e($c['card_no']) ?></div></td>
                 <td class="small"><?= e($c['claim_type'] ?: '-') ?></td>
                 <td><span class="pill pill-<?= rghs_category($c['status']) === 'approved' ? 'settled' : (rghs_category($c['status'])==='rejected'?'rejected':(rghs_category($c['status'])==='query'?'info':'process')) ?>"><?= e($c['status'] ?: '-') ?></span></td>
@@ -255,6 +255,13 @@ function bulk(act){
     document.getElementById('bulkForm').submit();
 }
 function addHidden(name,val){ var i=document.createElement('input'); i.type='hidden'; i.name=name; i.value=val; document.getElementById('bulkForm').appendChild(i); }
+// whole-row click opens the claim (ignore clicks on checkbox / links / buttons)
+document.querySelectorAll('tr.clk').forEach(function(tr){
+    tr.addEventListener('click', function(e){
+        if (e.target.closest('input,a,button,label,select')) return;
+        window.location.href = tr.getAttribute('data-href');
+    });
+});
 </script>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
