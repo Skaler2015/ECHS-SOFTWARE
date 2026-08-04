@@ -28,10 +28,10 @@ if ($total > 0) { @rghs_daily_snapshot(); }
 // this-month target vs achieved
 $thisYm = date('Y-m');
 $tgt = rghs_target($thisYm);
-$mAch = $pdo->prepare("SELECT COUNT(*) n, COALESCE(SUM(claim_amt),0) amt FROM rghs_claims WHERE DATE_FORMAT(submit_date,'%Y-%m')=?");
-$mAch->execute([$thisYm]); $ach = $mAch->fetch();
-$mRecv = $pdo->prepare("SELECT COALESCE(SUM(paid_amount),0) s FROM rghs_claims WHERE DATE_FORMAT(payment_date,'%Y-%m')=?");
-$mRecv->execute([$thisYm]); $achRecv = (float)$mRecv->fetch()['s'];
+$mAch = $pdo->prepare("SELECT COUNT(*) n, COALESCE(SUM(claim_amt),0) amt FROM rghs_claims WHERE (YEAR(submit_date)*100+MONTH(submit_date))=?");
+$mAch->execute([(int)str_replace('-','',$thisYm)]); $ach = $mAch->fetch();
+$mRecv = $pdo->prepare("SELECT COALESCE(SUM(paid_amount),0) s FROM rghs_claims WHERE (YEAR(payment_date)*100+MONTH(payment_date))=?");
+$mRecv->execute([(int)str_replace('-','',$thisYm)]); $achRecv = (float)$mRecv->fetch()['s'];
 
 // alerts
 $alerts = [];

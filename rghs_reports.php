@@ -145,9 +145,9 @@ $depts = $pdo->query("SELECT COALESCE(NULLIF(department,''),'—') dept, COUNT(*
 $thisM = date('Y-m'); $prevM = date('Y-m', strtotime('first day of last month'));
 function mstat($pdo,$ym){ $r=$pdo->prepare("SELECT COUNT(*) n, COALESCE(SUM(claim_amt),0) claim, COALESCE(SUM(cu_amt),0) cu,
     SUM(status LIKE '%APPROVED%' OR status LIKE '%Approved%') appn, SUM(status LIKE '%REJECT%' OR status LIKE '%Reject%') rejn
-    FROM rghs_claims WHERE DATE_FORMAT(submit_date,'%Y-%m')=?"); $r->execute([$ym]); return $r->fetch(); }
+    FROM rghs_claims WHERE (YEAR(submit_date)*100+MONTH(submit_date))=?"); $r->execute([(int)str_replace('-','',$ym)]); return $r->fetch(); }
 $mNow = mstat($pdo,$thisM); $mPrev = mstat($pdo,$prevM);
-$mPaid = function($pdo,$ym){ $r=$pdo->prepare("SELECT COALESCE(SUM(paid_amount),0) s FROM rghs_claims WHERE DATE_FORMAT(payment_date,'%Y-%m')=?"); $r->execute([$ym]); return (float)$r->fetch()['s']; };
+$mPaid = function($pdo,$ym){ $r=$pdo->prepare("SELECT COALESCE(SUM(paid_amount),0) s FROM rghs_claims WHERE (YEAR(payment_date)*100+MONTH(payment_date))=?"); $r->execute([(int)str_replace('-','',$ym)]); return (float)$r->fetch()['s']; };
 $paidNow = $mPaid($pdo,$thisM); $paidPrev = $mPaid($pdo,$prevM);
 function delta($now,$prev){ if($prev==0) return $now>0?'<span style="color:#16A34A">▲ new</span>':'—'; $d=round(($now-$prev)/$prev*100); return $d>=0?'<span style="color:#16A34A">▲ '.$d.'%</span>':'<span style="color:#dc3545">▼ '.abs($d).'%</span>'; }
 

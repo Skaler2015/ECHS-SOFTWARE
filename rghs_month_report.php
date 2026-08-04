@@ -7,18 +7,19 @@ $pdo = db();
 
 $ym = preg_match('/^\d{4}-\d{2}$/', $_GET['ym'] ?? '') ? $_GET['ym'] : date('Y-m');
 $label = date('F Y', strtotime($ym.'-01'));
+$ymn = (int)str_replace('-','',$ym);
 
 $s = $pdo->prepare("SELECT COUNT(*) n, COALESCE(SUM(claim_amt),0) claim, COALESCE(SUM(cu_amt),0) cu,
     SUM(status LIKE '%APPROVED%' OR status LIKE '%Approved%') appn,
     SUM(status LIKE '%REJECT%' OR status LIKE '%Reject%') rejn
-    FROM rghs_claims WHERE DATE_FORMAT(submit_date,'%Y-%m')=?");
-$s->execute([$ym]); $sum = $s->fetch();
-$recv = $pdo->prepare("SELECT COALESCE(SUM(paid_amount),0) s, COUNT(*) n FROM rghs_claims WHERE DATE_FORMAT(payment_date,'%Y-%m')=?");
-$recv->execute([$ym]); $r = $recv->fetch();
-$byType = $pdo->prepare("SELECT COALESCE(NULLIF(claim_type,''),'—') t, COUNT(*) n, COALESCE(SUM(claim_amt),0) amt FROM rghs_claims WHERE DATE_FORMAT(submit_date,'%Y-%m')=? GROUP BY t ORDER BY n DESC");
-$byType->execute([$ym]); $byType = $byType->fetchAll();
-$byDoc = $pdo->prepare("SELECT doctor_name, COUNT(*) n, COALESCE(SUM(claim_amt),0) amt FROM rghs_claims WHERE DATE_FORMAT(submit_date,'%Y-%m')=? AND doctor_name IS NOT NULL AND doctor_name<>'' GROUP BY doctor_name ORDER BY n DESC LIMIT 10");
-$byDoc->execute([$ym]); $byDoc = $byDoc->fetchAll();
+    FROM rghs_claims WHERE (YEAR(submit_date)*100+MONTH(submit_date))=?");
+$s->execute([$ymn]); $sum = $s->fetch();
+$recv = $pdo->prepare("SELECT COALESCE(SUM(paid_amount),0) s, COUNT(*) n FROM rghs_claims WHERE (YEAR(payment_date)*100+MONTH(payment_date))=?");
+$recv->execute([$ymn]); $r = $recv->fetch();
+$byType = $pdo->prepare("SELECT COALESCE(NULLIF(claim_type,''),'—') t, COUNT(*) n, COALESCE(SUM(claim_amt),0) amt FROM rghs_claims WHERE (YEAR(submit_date)*100+MONTH(submit_date))=? GROUP BY t ORDER BY n DESC");
+$byType->execute([$ymn]); $byType = $byType->fetchAll();
+$byDoc = $pdo->prepare("SELECT doctor_name, COUNT(*) n, COALESCE(SUM(claim_amt),0) amt FROM rghs_claims WHERE (YEAR(submit_date)*100+MONTH(submit_date))=? AND doctor_name IS NOT NULL AND doctor_name<>'' GROUP BY doctor_name ORDER BY n DESC LIMIT 10");
+$byDoc->execute([$ymn]); $byDoc = $byDoc->fetchAll();
 $hosp = APP_OWNER;
 ?>
 <!DOCTYPE html><html lang="hi"><head><meta charset="utf-8"><title>RGHS Report <?= e($label) ?></title>
