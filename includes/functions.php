@@ -17,9 +17,27 @@ function redirect($path) {
     exit;
 }
 
-/** Format money in Indian style */
+/** Indian-style number grouping: 12345678.5 -> 1,23,45,678.50 */
+function inr($n, $dec = 2) {
+    $n = (float)$n;
+    $neg = $n < 0;
+    $n = abs($n);
+    $s = number_format($n, $dec, '.', '');
+    $parts = explode('.', $s);
+    $int = $parts[0];
+    $frac = isset($parts[1]) ? '.' . $parts[1] : '';
+    $last3 = substr($int, -3);
+    $rest = substr($int, 0, -3);
+    if ($rest !== '') {
+        $rest = preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', $rest);
+        $last3 = ',' . $last3;
+    }
+    return ($neg ? '-' : '') . $rest . $last3 . $frac;
+}
+
+/** Format money in Indian style, e.g. ₹1,23,45,678.50 */
 function money($n) {
-    return '₹' . number_format((float)$n, 2);
+    return '₹' . inr($n, 2);
 }
 
 /** Format a date nicely (dd-mm-yyyy) */

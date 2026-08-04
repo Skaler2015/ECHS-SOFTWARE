@@ -238,7 +238,7 @@ require __DIR__ . '/includes/header.php';
             <tr>
                 <td><a class="link" href="<?= BASE_URL ?>/echs_claim.php?scheme=ECHS&id=<?= urlencode($o['claim_id']) ?>"><?= e($o['claim_id']) ?></a></td>
                 <td><?= e($o['patient_name']) ?></td><td><?= e($o['accept_date_raw'] ?: '-') ?></td>
-                <td class="r"><?= number_format($o['net_claim_amt'],0) ?></td>
+                <td class="r"><?= inr($o['net_claim_amt'],0) ?></td>
                 <td><span class="pill pill-<?= echs_category($o['status']) ?>"><?= e($o['status']) ?></span></td>
             </tr>
         <?php endforeach; ?>

@@ -103,9 +103,9 @@ require __DIR__ . '/includes/header.php';
                 <td><a class="link" href="<?= BASE_URL ?>/echs_claim.php?scheme=ECHS&id=<?= urlencode($d['claim_id']) ?>"><?= e($d['claim_id']) ?></a></td>
                 <td><?= e($d['patient_name']) ?></td>
                 <td><?= e($d['card_id']) ?></td>
-                <td class="r"><?= number_format($d['net_claim_amt'],0) ?></td>
-                <td class="r"><?= number_format($d['approved_amt'],0) ?></td>
-                <td class="r"><strong><?= number_format($d['d'],0) ?></strong></td>
+                <td class="r"><?= inr($d['net_claim_amt'],0) ?></td>
+                <td class="r"><?= inr($d['approved_amt'],0) ?></td>
+                <td class="r"><strong><?= inr($d['d'],0) ?></strong></td>
             </tr>
         <?php endforeach; ?>
         <?php if (!$topDed): ?><tr><td colspan="6" class="muted">Koi deduction data nahi.</td></tr><?php endif; ?>

@@ -124,8 +124,8 @@ require __DIR__ . '/includes/header.php';
                 <td><?= e($c['patient_name']) ?></td>
                 <td><?= e($c['patient_type']) ?>/<?= e($c['admit_type']) ?></td>
                 <td class="nowrap"><?= e($c['accept_date_raw'] ?: '-') ?></td>
-                <td class="r"><?= number_format($c['net_claim_amt'],0) ?></td>
-                <td class="r"><?= number_format($c['approved_amt'],0) ?></td>
+                <td class="r"><?= inr($c['net_claim_amt'],0) ?></td>
+                <td class="r"><?= inr($c['approved_amt'],0) ?></td>
                 <td><span class="pill pill-info"><?= e($c['status']) ?></span></td>
                 <td class="nowrap"><?= e($c['processed_on_raw'] ?: '-') ?></td>
             </tr>

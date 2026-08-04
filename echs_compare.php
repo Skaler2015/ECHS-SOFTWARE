@@ -36,7 +36,7 @@ require __DIR__ . '/includes/header.php';
                 <td><?= e($r['patient_name']) ?></td>
                 <td><span class="pill pill-<?= echs_category($r['from_status']) ?>"><?= e($r['from_status']) ?></span></td>
                 <td><span class="pill pill-<?= echs_category($r['to_status']) ?>"><?= e($r['to_status']) ?></span></td>
-                <td class="r"><?= number_format($r['net_claim_amt'],0) ?></td>
+                <td class="r"><?= inr($r['net_claim_amt'],0) ?></td>
             </tr>
         <?php endforeach; ?>
         </tbody>

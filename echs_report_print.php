@@ -42,11 +42,11 @@ $recv = db()->query("SELECT COALESCE(SUM(amount),0) s FROM echs_payments")->fetc
         <tbody>
         <?php foreach ($byStatus as $s): ?>
             <tr><td><?= e($s['status']) ?></td><td class="r"><?= number_format($s['n']) ?></td>
-            <td class="r"><?= number_format($s['net'],0) ?></td><td class="r"><?= number_format($s['app'],0) ?></td></tr>
+            <td class="r"><?= inr($s['net'],0) ?></td><td class="r"><?= inr($s['app'],0) ?></td></tr>
         <?php endforeach; ?>
         </tbody>
         <tfoot><tr class="grand"><td class="r">Total</td><td class="r"><?= number_format($tot['n']) ?></td>
-        <td class="r"><?= number_format($tot['net'],0) ?></td><td class="r"><?= number_format($tot['app'],0) ?></td></tr></tfoot>
+        <td class="r"><?= inr($tot['net'],0) ?></td><td class="r"><?= inr($tot['app'],0) ?></td></tr></tfoot>
     </table>
 </div>
 </body></html>
