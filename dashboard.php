@@ -6,10 +6,9 @@ $meta   = scheme_meta($scheme);
 $page_title = $meta['short'] . ' Dashboard';
 $active = 'dashboard';
 
-// ECHS uses a claims-based dashboard (Excel imported from the portal)
+// ECHS is now the standalone tracker app — send there.
 if ($scheme === 'ECHS') {
-    require __DIR__ . '/includes/echs_dashboard.php';
-    return;
+    redirect(BASE_URL . '/echs.php');
 }
 
 // stats

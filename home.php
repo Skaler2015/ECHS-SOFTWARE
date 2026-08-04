@@ -6,14 +6,26 @@ $u = current_user();
 // quick counts per scheme
 function scheme_counts($scheme) {
     if ($scheme === 'ECHS') {
+        // ECHS data lives in the tracker's central store (echs_kv). Read the
+        // claims blob and summarise it for the tile.
         $c = ['labels'=>['Claims','Settled','Pending'], 'patients'=>0,'bills'=>0,'pending'=>0,'amount'=>0,'echs'=>true];
         try {
-            $r = db()->query("SELECT COUNT(*) n, COALESCE(SUM(net_claim_amt),0) s FROM echs_claims")->fetch();
-            $c['patients'] = (int)($r['n'] ?? 0);           // total claims
-            $c['amount']   = (float)($r['s'] ?? 0);         // net amount
-            $st = db()->query("SELECT COUNT(*) n FROM echs_claims WHERE status LIKE '%Settled%'")->fetch();
-            $c['bills'] = (int)($st['n'] ?? 0);             // settled
-            $c['pending'] = $c['patients'] - $c['bills'];    // not settled
+            $st = db()->prepare("SELECT kval FROM echs_kv WHERE kkey = ?");
+            $st->execute(['echs_echs_claims']);   // app stores under echs_ + 'echs_claims'
+            $row = $st->fetch();
+            if ($row && $row['kval']) {
+                $data = json_decode($row['kval'], true);
+                $claims = $data['claims'] ?? [];
+                $settled = 0; $amount = 0.0;
+                foreach ($claims as $cl) {
+                    if (stripos((string)($cl['status'] ?? ''), 'settled') !== false) $settled++;
+                    $amount += (float)($cl['netClaimAmt'] ?? 0);
+                }
+                $c['patients'] = count($claims);
+                $c['bills']    = $settled;
+                $c['pending']  = max(0, $c['patients'] - $settled);
+                $c['amount']   = $amount;
+            }
         } catch (Exception $e) {}
         return $c;
     }
@@ -52,8 +64,9 @@ function scheme_counts($scheme) {
     <p class="home-sub">Apni scheme chunein — dono alag-alag modules hain.</p>
 
     <div class="scheme-grid">
-        <?php foreach ($SCHEMES as $code => $m): $c = scheme_counts($code); ?>
-        <a class="scheme-tile" href="<?= BASE_URL ?>/dashboard.php?scheme=<?= $code ?>" style="--tile:<?= e($m['color']) ?>">
+        <?php foreach ($SCHEMES as $code => $m): $c = scheme_counts($code);
+              $tileUrl = ($code === 'ECHS') ? (BASE_URL.'/echs.php') : (BASE_URL.'/dashboard.php?scheme='.$code); ?>
+        <a class="scheme-tile" href="<?= $tileUrl ?>" style="--tile:<?= e($m['color']) ?>">
             <div class="scheme-tile-icon"><?= e($m['icon']) ?></div>
             <div class="scheme-tile-title"><?= e($m['short']) ?></div>
             <div class="scheme-tile-name"><?= e($m['name']) ?></div>
