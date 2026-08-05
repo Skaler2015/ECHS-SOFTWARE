@@ -108,6 +108,73 @@ function flash($msg = null, $type = 'success') {
 }
 
 /**
+ * Parse a smart search string into SQL conditions (for the claims lists).
+ *
+ * Supported syntax (all tokens are ANDed together):
+ *   - plain word            -> matched (LIKE) across every column in $textCols
+ *   - "quoted phrase"       -> same, but the whole phrase as one term
+ *   - key:value             -> a specific field from $fieldMap
+ *                              ($fieldMap[key] = [column,'like'] | [column,'eq'] | [null, callable])
+ *   - amt>N / amt<N / >N    -> compare $amountCol (>= / <=)
+ *   - age>N / age<N         -> compare $ageExpr (days), e.g. "pending 60+ din"
+ *
+ * Returns [conds[], args[]] — caller ANDs the conds into its WHERE.
+ * All values are bound as placeholders (no SQL injection).
+ */
+function smart_search($q, array $textCols, array $fieldMap = [], $amountCol = null, $ageExpr = null) {
+    $conds = []; $args = [];
+    $q = trim((string)$q);
+    if ($q === '') return [$conds, $args];
+
+    // tokenize, keeping "quoted phrases" together
+    if (!preg_match_all('/"([^"]+)"|(\S+)/', $q, $m, PREG_SET_ORDER)) return [$conds, $args];
+
+    foreach ($m as $tk) {
+        $tok = ($tk[1] !== '') ? $tk[1] : ($tk[2] ?? '');
+        $tok = trim($tok);
+        if ($tok === '') continue;
+
+        // key:value operator
+        if (preg_match('/^([a-zA-Z]+):(.*)$/', $tok, $mm) && isset($fieldMap[strtolower($mm[1])])) {
+            $val = trim($mm[2], '"');
+            if ($val === '') continue;
+            [$col, $mode] = $fieldMap[strtolower($mm[1])];
+            if (is_callable($mode)) {
+                [$c, $a] = $mode($val);
+                if ($c) { $conds[] = $c; foreach ((array)$a as $x) $args[] = $x; }
+            } elseif ($mode === 'eq') {
+                $conds[] = "$col = ?"; $args[] = $val;
+            } else {
+                $conds[] = "$col LIKE ?"; $args[] = "%$val%";
+            }
+            continue;
+        }
+
+        // amount:  amt>N / amt<N / amt>=N / >N / <N
+        if ($amountCol && preg_match('/^(?:amt)?([<>])(=?)(\d+(?:\.\d+)?)$/i', $tok, $mm)) {
+            $conds[] = "$amountCol " . $mm[1] . $mm[2] . " ?";
+            $args[] = (float)$mm[3];
+            continue;
+        }
+
+        // age:  age>N / age<N / age>=N   (days since $ageExpr's date)
+        if ($ageExpr && preg_match('/^age([<>])(=?)(\d+)$/i', $tok, $mm)) {
+            $conds[] = "($ageExpr) " . $mm[1] . $mm[2] . " ?";
+            $args[] = (int)$mm[3];
+            continue;
+        }
+
+        // plain term -> OR across all text columns
+        if ($textCols) {
+            $ors = [];
+            foreach ($textCols as $c) { $ors[] = "$c LIKE ?"; $args[] = "%$tok%"; }
+            $conds[] = '(' . implode(' OR ', $ors) . ')';
+        }
+    }
+    return [$conds, $args];
+}
+
+/**
  * Generate the next bill number for a scheme, e.g. RGHS-0001.
  */
 function next_bill_no($scheme) {

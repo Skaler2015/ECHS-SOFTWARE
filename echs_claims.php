@@ -126,10 +126,12 @@ require __DIR__ . '/includes/header.php';
     <?php endforeach; ?>
 </div>
 
-<form class="searchbar" method="get" style="margin-bottom:12px">
+<?php $advOpen = array_intersect_key($_GET, ['from'=>1,'to'=>1,'amin'=>1,'amax'=>1,'age'=>1,'region'=>1,'flag'=>1]); ?>
+<form class="searchbar" method="get" style="margin-bottom:6px">
     <input type="hidden" name="scheme" value="ECHS">
     <?php if ($curCat): ?><input type="hidden" name="cat" value="<?= e($curCat) ?>"><?php endif; ?>
-    <input type="text" name="q" value="<?= e($_GET['q'] ?? '') ?>" placeholder="Claim ID, patient, ESM, card, doctor…">
+    <input type="hidden" name="dir" value="<?= e(strtolower($dir)) ?>">
+    <input type="text" name="q" value="<?= e($_GET['q'] ?? '') ?>" placeholder="Search — claim id, patient, ESM, card, doctor…  ya  card:12345  doctor:sharma  amt&gt;5000  age&gt;60" style="min-width:260px;flex:1">
     <select name="type">
         <option value="">OPD/IPD: sab</option>
         <option value="O" <?= ($_GET['type']??'')==='O'?'selected':'' ?>>OPD</option>
@@ -150,7 +152,35 @@ require __DIR__ . '/includes/header.php';
     <?php if (array_diff_key($_GET, ['scheme'=>1,'page'=>1,'sort'=>1,'dir'=>1,'per'=>1])): ?>
         <a class="btn btn-light" href="<?= BASE_URL ?>/echs_claims.php?scheme=ECHS">Reset</a>
     <?php endif; ?>
+
+    <details class="adv" style="width:100%;margin-top:8px" <?= $advOpen?'open':'' ?>>
+        <summary class="link" style="cursor:pointer;font-size:.85rem">⚙️ Advanced filters</summary>
+        <div class="adv-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px">
+            <label class="fld"><span class="muted small">Accept date se</span><input type="date" name="from" value="<?= e($_GET['from']??'') ?>"></label>
+            <label class="fld"><span class="muted small">Accept date tak</span><input type="date" name="to" value="<?= e($_GET['to']??'') ?>"></label>
+            <label class="fld"><span class="muted small">Amount min ₹</span><input type="number" name="amin" value="<?= e($_GET['amin']??'') ?>" placeholder="0"></label>
+            <label class="fld"><span class="muted small">Amount max ₹</span><input type="number" name="amax" value="<?= e($_GET['amax']??'') ?>" placeholder="—"></label>
+            <label class="fld"><span class="muted small">Age (din se purana)</span><input type="number" name="age" value="<?= e($_GET['age']??'') ?>" placeholder="e.g. 60"></label>
+            <label class="fld"><span class="muted small">Region</span><input type="text" name="region" value="<?= e($_GET['region']??'') ?>" placeholder="e.g. Jaipur"></label>
+            <label class="fld"><span class="muted small">Flag</span>
+                <select name="flag">
+                    <option value="">— koi nahi —</option>
+                    <?php foreach (['nodoctor'=>'Bina doctor','followup'=>'Follow-up','hasdoc'=>'Document laga hai','hasquery'=>'Query khuli hai','noteflag'=>'Note likha hai','dupe'=>'Duplicate mark'] as $fk=>$fl): ?>
+                        <option value="<?= $fk ?>" <?= ($_GET['flag']??'')===$fk?'selected':'' ?>><?= e($fl) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label class="fld"><span class="muted small">Sort</span>
+                <select name="sort">
+                    <?php foreach (['accept_date'=>'Accept date','claim_amt'=>'Claimed','approved_amt'=>'Approved','patient_name'=>'Patient','status'=>'Stage','claim_id'=>'Claim ID'] as $sk=>$sl): ?>
+                        <option value="<?= $sk ?>" <?= $sort===$sk?'selected':'' ?>><?= e($sl) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+        </div>
+    </details>
 </form>
+<p class="muted small" style="margin:0 0 12px">💡 <strong>Tip:</strong> kai shabd likho (sab match honge) · <code>card:12345</code> <code>doctor:sharma</code> <code>status:settled</code> <code>region:jaipur</code> <code>amt&gt;5000</code> <code>age&gt;60</code> · <code>"exact phrase"</code></p>
 
 <?php if (!empty($_GET['doctor'])): ?>
     <p class="muted small">Doctor filter: <strong><?= e($_GET['doctor']) ?></strong> · <a class="link" href="<?= qs(['doctor'=>null]) ?>">hataayein</a></p>
@@ -263,7 +293,21 @@ document.querySelectorAll('tr.clk').forEach(function(tr){
     var f = document.querySelector('form.searchbar');
     if (!f) return;
     f.querySelectorAll('select').forEach(function(el){ el.addEventListener('change', function(){ f.submit(); }); });
-    f.querySelectorAll('input[type=text], input[type=number], input[type=date]').forEach(function(el){ el.addEventListener('change', function(){ f.submit(); }); });
+    f.querySelectorAll('input[type=date], input[type=number]').forEach(function(el){ el.addEventListener('change', function(){ f.submit(); }); });
+    // other text boxes (region) auto-submit on blur/Enter — but NOT the live q box
+    f.querySelectorAll('input[type=text]').forEach(function(el){ if (el.name==='q') return; el.addEventListener('change', function(){ f.submit(); }); });
+    // live search: type karte hi (thoda rukte hi) result — min 2 chars
+    var qbox = f.querySelector('input[name=q]');
+    if (qbox){
+        var t;
+        qbox.addEventListener('input', function(){
+            clearTimeout(t);
+            var v = qbox.value.trim();
+            if (v.length === 1) return;               // 1 char par mat chalo
+            t = setTimeout(function(){ f.submit(); }, 600);
+        });
+        qbox.addEventListener('change', function(){ clearTimeout(t); f.submit(); });
+    }
 })();
 </script>
 

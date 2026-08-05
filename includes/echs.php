@@ -310,8 +310,26 @@ function echs_build_filter(array $g) {
     $amax   = trim($g['amax'] ?? '');
 
     if ($q !== '') {
-        $where[] = '(claim_id LIKE ? OR patient_name LIKE ? OR esm_name LIKE ? OR card_id LIKE ? OR doctor_name LIKE ?)';
-        $l = "%$q%"; array_push($args, $l, $l, $l, $l, $l);
+        [$sc, $sa] = smart_search(
+            $q,
+            ['claim_id','patient_name','esm_name','card_id','doctor_name','region','status'],
+            [
+                'id'      => ['claim_id','like'],   'claim'  => ['claim_id','like'],
+                'card'    => ['card_id','like'],
+                'esm'     => ['esm_name','like'],
+                'patient' => ['patient_name','like'], 'pt' => ['patient_name','like'],
+                'doctor'  => ['doctor_name','like'], 'dr' => ['doctor_name','like'],
+                'status'  => ['status','like'],     'st'  => ['status','like'],
+                'region'  => ['region','like'],     'rg'  => ['region','like'],
+                'hosp'    => ['hospital_name','like'],
+                'cat'     => ['category','eq'],
+                'type'    => [null, function($v){ $u=strtoupper(trim($v)); $c=($u==='OPD'||$u==='O')?'O':(($u==='IPD'||$u==='I')?'I':$u); return ['patient_type = ?', [$c]]; }],
+            ],
+            'claim_amt',
+            'DATEDIFF(CURDATE(),accept_date)'
+        );
+        foreach ($sc as $c) $where[] = $c;
+        foreach ($sa as $a) $args[] = $a;
     }
     if ($status !== '') { $where[] = 'status = ?'; $args[] = $status; }
     if ($type !== '')   { $where[] = 'patient_type = ?'; $args[] = $type; }
@@ -329,6 +347,9 @@ function echs_build_filter(array $g) {
     if ($flag === 'nodoctor') $where[] = "(doctor_name IS NULL OR doctor_name = '')";
     elseif ($flag === 'followup') $where[] = "followup = 1";
     elseif ($flag === 'dupe') $where[] = "dupe_flag = 1";
+    elseif ($flag === 'hasdoc') $where[] = "EXISTS (SELECT 1 FROM echs_docs d WHERE d.claim_id = echs_claims.claim_id COLLATE utf8mb4_unicode_ci)";
+    elseif ($flag === 'noteflag') $where[] = "(notes IS NOT NULL AND notes <> '')";
+    elseif ($flag === 'hasquery') $where[] = "EXISTS (SELECT 1 FROM echs_queries qq WHERE qq.claim_id = echs_claims.claim_id COLLATE utf8mb4_unicode_ci AND qq.status <> 'closed')";
 
     $assignee = trim($g['assignee'] ?? '');
     if ($assignee === '__none') $where[] = "(assigned_to IS NULL OR assigned_to = '')";

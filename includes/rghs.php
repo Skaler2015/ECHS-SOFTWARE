@@ -455,8 +455,27 @@ function rghs_build_filter(array $g) {
     $amax   = trim($g['amax'] ?? '');
 
     if ($q !== '') {
-        $where[] = '(tid LIKE ? OR patient_name LIKE ? OR card_no LIKE ? OR enrollment_id LIKE ? OR doctor_name LIKE ? OR mobile LIKE ?)';
-        $l = "%$q%"; array_push($args, $l, $l, $l, $l, $l, $l);
+        [$sc, $sa] = smart_search(
+            $q,
+            ['tid','patient_name','card_no','enrollment_id','doctor_name','mobile','hospital_name','status','claim_type'],
+            [
+                'tid'     => ['tid','like'],
+                'card'    => ['card_no','like'],
+                'enroll'  => ['enrollment_id','like'], 'enrollment' => ['enrollment_id','like'],
+                'patient' => ['patient_name','like'], 'pt' => ['patient_name','like'],
+                'doctor'  => ['doctor_name','like'], 'dr' => ['doctor_name','like'],
+                'mobile'  => ['mobile','like'],       'mob' => ['mobile','like'],
+                'status'  => ['status','like'],       'st'  => ['status','like'],
+                'hosp'    => ['hospital_name','like'],
+                'type'    => ['claim_type','like'],
+                'dept'    => ['department','like'],
+                'year'    => ['sub_year','eq'],
+            ],
+            'claim_amt',
+            'DATEDIFF(CURDATE(),submit_date)'
+        );
+        foreach ($sc as $c) $where[] = $c;
+        foreach ($sa as $a) $args[] = $a;
     }
     if ($status !== '') { $where[] = 'status = ?'; $args[] = $status; }
     if ($type !== '')   { $where[] = 'claim_type = ?'; $args[] = $type; }
@@ -480,6 +499,10 @@ function rghs_build_filter(array $g) {
     $flag = trim($g['flag'] ?? '');
     if ($flag === 'nodoctor') $where[] = "(doctor_name IS NULL OR doctor_name = '')";
     elseif ($flag === 'followup') $where[] = "followup = 1";
+    elseif ($flag === 'dupe') $where[] = "dupe_flag = 1";
+    elseif ($flag === 'noteflag') $where[] = "(notes IS NOT NULL AND notes <> '')";
+    elseif ($flag === 'hasdoc') $where[] = "EXISTS (SELECT 1 FROM rghs_docs d WHERE d.tid = rghs_claims.tid COLLATE utf8mb4_unicode_ci)";
+    elseif ($flag === 'hasquery') $where[] = "EXISTS (SELECT 1 FROM rghs_queries qq WHERE qq.tid = rghs_claims.tid COLLATE utf8mb4_unicode_ci AND qq.status <> 'closed')";
 
     $assignee = trim($g['assignee'] ?? '');
     if ($assignee === '__none') $where[] = "(assigned_to IS NULL OR assigned_to = '')";
