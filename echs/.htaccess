@@ -1,5 +1,0 @@
-# The tracker HTML is served only through the login-gated ../echs.php
-# (which readfile()s it from disk). Block direct browser access.
-<Files "app.html">
-    Require all denied
-</Files>

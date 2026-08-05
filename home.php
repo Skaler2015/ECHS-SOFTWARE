@@ -6,26 +6,15 @@ $u = current_user();
 // quick counts per scheme
 function scheme_counts($scheme) {
     if ($scheme === 'ECHS') {
-        // ECHS data lives in the tracker's central store (echs_kv). Read the
-        // claims blob and summarise it for the tile.
+        // ECHS is now a native upload-based claims tracker (echs_claims).
         $c = ['labels'=>['Claims','Settled','Pending'], 'patients'=>0,'bills'=>0,'pending'=>0,'amount'=>0,'echs'=>true];
         try {
-            $st = db()->prepare("SELECT kval FROM echs_kv WHERE kkey = ?");
-            $st->execute(['echs_echs_claims']);   // app stores under echs_ + 'echs_claims'
-            $row = $st->fetch();
-            if ($row && $row['kval']) {
-                $data = json_decode($row['kval'], true);
-                $claims = $data['claims'] ?? [];
-                $settled = 0; $amount = 0.0;
-                foreach ($claims as $cl) {
-                    if (stripos((string)($cl['status'] ?? ''), 'settled') !== false) $settled++;
-                    $amount += (float)($cl['netClaimAmt'] ?? 0);
-                }
-                $c['patients'] = count($claims);
-                $c['bills']    = $settled;
-                $c['pending']  = max(0, $c['patients'] - $settled);
-                $c['amount']   = $amount;
-            }
+            $r = db()->query("SELECT COUNT(*) n, COALESCE(SUM(claim_amt),0) s FROM echs_claims")->fetch();
+            $c['patients'] = (int)($r['n'] ?? 0);
+            $c['amount']   = (float)($r['s'] ?? 0);
+            $st = db()->query("SELECT COUNT(*) n FROM echs_claims WHERE category='settled'")->fetch();
+            $c['bills']    = (int)($st['n'] ?? 0);
+            $c['pending']  = max(0, $c['patients'] - $c['bills']);
         } catch (Exception $e) {}
         return $c;
     }
@@ -98,7 +87,7 @@ function scheme_counts($scheme) {
 
     <div class="scheme-grid">
         <?php foreach ($SCHEMES as $code => $m): $c = $countsByCode[$code];
-              $tileUrl = ($code === 'ECHS') ? (BASE_URL.'/echs.php') : (BASE_URL.'/dashboard.php?scheme='.$code); ?>
+              $tileUrl = BASE_URL.'/dashboard.php?scheme='.$code; ?>
         <a class="scheme-tile" href="<?= $tileUrl ?>" style="--tile:<?= e($m['color']) ?>">
             <div class="scheme-tile-icon"><?= e($m['icon']) ?></div>
             <div class="scheme-tile-title"><?= e($m['short']) ?></div>
@@ -116,7 +105,8 @@ function scheme_counts($scheme) {
 
     <div class="home-links">
         <a href="<?= BASE_URL ?>/settings.php">⚙️ Settings</a>
-        <a href="<?= BASE_URL ?>/echs_restore.php">🛡️ ECHS Data Safety &amp; Backup</a>
+        <a href="<?= BASE_URL ?>/echs_backup.php?scheme=ECHS">🛡️ ECHS Data Safety</a>
+        <a href="<?= BASE_URL ?>/rghs_backup.php?scheme=RGHS">🛡️ RGHS Data Safety</a>
     </div>
 </main>
 <footer class="footer">© <?= date('Y') ?> <?= e(APP_NAME) ?> · <?= e(APP_OWNER) ?></footer>

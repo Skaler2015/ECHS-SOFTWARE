@@ -21,22 +21,21 @@ if ($scheme === 'ECHS') {
         ['grp' => 'Main', 'items' => [
             ['k'=>'dashboard','t'=>'Dashboard','i'=>'dashboard','u'=>BASE_URL.'/dashboard.php?scheme=ECHS'],
             ['k'=>'claims','t'=>'Claims','i'=>'file','u'=>BASE_URL.'/echs_claims.php?scheme=ECHS'],
-            ['k'=>'pending','t'=>'Pending & Aging','i'=>'clock','u'=>BASE_URL.'/echs_pending.php?scheme=ECHS'],
-            ['k'=>'payments','t'=>'Payments','i'=>'card','u'=>BASE_URL.'/echs_payments.php?scheme=ECHS'],
+            ['k'=>'changes','t'=>'Kya Badla','i'=>'bell','u'=>BASE_URL.'/echs_changes.php?scheme=ECHS'],
             ['k'=>'tasks','t'=>'Tasks','i'=>'checks','u'=>BASE_URL.'/echs_tasks.php?scheme=ECHS'],
-            ['k'=>'doctors','t'=>'Doctors','i'=>'patients','u'=>BASE_URL.'/echs_doctors.php?scheme=ECHS'],
         ]],
         ['grp' => 'Lookup', 'items' => [
-            ['k'=>'cardhistory','t'=>'Card History','i'=>'search','u'=>BASE_URL.'/echs_card.php?scheme=ECHS'],
-            ['k'=>'patientsearch','t'=>'Patient Search','i'=>'patients','u'=>BASE_URL.'/echs_patient.php?scheme=ECHS'],
+            ['k'=>'patients','t'=>'Patient / Card','i'=>'patients','u'=>BASE_URL.'/echs_patient.php?scheme=ECHS'],
+            ['k'=>'doctors','t'=>'Doctors','i'=>'patients','u'=>BASE_URL.'/echs_doctors.php?scheme=ECHS'],
         ]],
         ['grp' => 'Data', 'items' => [
-            ['k'=>'reports','t'=>'Reports Center','i'=>'chart','u'=>BASE_URL.'/echs_reports.php?scheme=ECHS'],
+            ['k'=>'reports','t'=>'Reports','i'=>'chart','u'=>BASE_URL.'/echs_reports.php?scheme=ECHS'],
             ['k'=>'upload','t'=>'Upload Excel','i'=>'upload','u'=>BASE_URL.'/echs_upload.php?scheme=ECHS'],
-            ['k'=>'manage','t'=>'Manage','i'=>'database','u'=>BASE_URL.'/echs_manage.php?scheme=ECHS'],
+            ['k'=>'backup','t'=>'Data Safety','i'=>'database','u'=>BASE_URL.'/echs_backup.php?scheme=ECHS'],
         ]],
         ['grp' => 'Account', 'items' => [
             ['k'=>'users','t'=>'Staff Users','i'=>'users','u'=>BASE_URL.'/echs_users.php?scheme=ECHS'],
+            ['k'=>'activity','t'=>'Activity Log','i'=>'chart','u'=>BASE_URL.'/echs_activity.php?scheme=ECHS'],
             ['k'=>'settings','t'=>'Settings','i'=>'settings','u'=>BASE_URL.'/settings.php'],
         ]],
     ];
@@ -134,7 +133,7 @@ if(localStorage.getItem('sidebar')==='collapsed')document.body.classList.add('sb
             <button class="icon-btn menu-btn" onclick="toggleSidebar()" aria-label="Menu"><?= icon('menu') ?></button>
             <div class="scheme-switch" title="Portal switch karein">
                 <a class="ss-opt <?= $scheme==='RGHS'?'on':'' ?>" href="<?= BASE_URL ?>/dashboard.php?scheme=RGHS">RGHS</a>
-                <a class="ss-opt <?= $scheme==='ECHS'?'on':'' ?>" href="<?= BASE_URL ?>/echs.php">ECHS</a>
+                <a class="ss-opt <?= $scheme==='ECHS'?'on':'' ?>" href="<?= BASE_URL ?>/dashboard.php?scheme=ECHS">ECHS</a>
             </div>
             <form class="topsearch" method="get" action="<?= $searchAction ?>" role="search">
                 <input type="hidden" name="scheme" value="<?= $scheme ?>">

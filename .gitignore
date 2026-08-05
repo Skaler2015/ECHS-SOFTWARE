@@ -14,3 +14,7 @@ uploads/*
 uploads/rghs/*
 !uploads/rghs/.htaccess
 !uploads/rghs/index.php
+!uploads/echs
+uploads/echs/*
+!uploads/echs/.htaccess
+!uploads/echs/index.php

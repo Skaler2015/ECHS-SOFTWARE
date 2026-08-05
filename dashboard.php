@@ -6,9 +6,10 @@ $meta   = scheme_meta($scheme);
 $page_title = $meta['short'] . ' Dashboard';
 $active = 'dashboard';
 
-// ECHS is now the standalone tracker app — send there.
+// ECHS is now a native upload-based claims tracker.
 if ($scheme === 'ECHS') {
-    redirect(BASE_URL . '/echs.php');
+    require __DIR__ . '/includes/echs_dashboard.php';
+    return;
 }
 
 // RGHS is now an upload-based claims tracker.
