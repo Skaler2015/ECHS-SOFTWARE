@@ -258,6 +258,13 @@ document.querySelectorAll('tr.clk').forEach(function(tr){
         window.location.href = tr.getAttribute('data-href');
     });
 });
+// auto-apply filters: koi bhi filter badlo, bina "Filter" dabaye result aa jaye
+(function(){
+    var f = document.querySelector('form.searchbar');
+    if (!f) return;
+    f.querySelectorAll('select').forEach(function(el){ el.addEventListener('change', function(){ f.submit(); }); });
+    f.querySelectorAll('input[type=text], input[type=number], input[type=date]').forEach(function(el){ el.addEventListener('change', function(){ f.submit(); }); });
+})();
 </script>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
