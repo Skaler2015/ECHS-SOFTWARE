@@ -37,7 +37,6 @@ $groups = $pdo->query("SELECT card_id, claim_amt, accept_date, COUNT(*) n
     GROUP BY card_id, claim_amt, accept_date HAVING COUNT(*)>1
     ORDER BY n DESC, accept_date DESC LIMIT 200")->fetchAll();
 
-function fdate($d){ return $d ? date('d-m-Y', strtotime($d)) : '-'; }
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="page-head">

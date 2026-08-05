@@ -124,7 +124,6 @@ if (!empty($c['card_id'])) {
     $m->execute([$c['card_id'], $id]); $more = $m->fetchAll();
 }
 
-function fdate($d){ return $d ? date('d-m-Y', strtotime($d)) : '-'; }
 $cat = $c['category'] ?: echs_category($c['status']);
 require __DIR__ . '/includes/header.php';
 ?>

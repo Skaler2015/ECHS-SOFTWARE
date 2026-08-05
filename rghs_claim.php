@@ -133,7 +133,6 @@ if (!empty($c['enrollment_id'])) {
     $m->execute([$c['enrollment_id'], $tid]); $more = $m->fetchAll();
 }
 
-function fdate($d){ return $d ? date('d-m-Y', strtotime($d)) : '-'; }
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="page-head">

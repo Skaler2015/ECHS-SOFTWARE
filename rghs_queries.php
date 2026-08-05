@@ -78,7 +78,6 @@ $uncoveredN = (int)$pdo->query("SELECT COUNT(*) n FROM rghs_claims c
 
 function qtab($k,$cur,$lbl,$n=null){ $on=$k===$cur?'on':''; $q=array_merge($_GET,['st'=>$k,'scheme'=>'RGHS']);
     return '<a class="tab '.$on.'" href="'.BASE_URL.'/rghs_queries.php?'.http_build_query($q).'">'.e($lbl).($n!==null?' <span class="muted">('.number_format($n).')</span>':'').'</a>'; }
-function fdate($d){ return $d ? date('d-m-Y', strtotime($d)) : '-'; }
 $curUrl = BASE_URL.'/rghs_queries.php?'.http_build_query(array_merge($_GET,['scheme'=>'RGHS']));
 require __DIR__ . '/includes/header.php';
 ?>
