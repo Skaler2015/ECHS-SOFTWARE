@@ -17,9 +17,9 @@ $c = $st->fetch();
 
 if (!$c) {
     $page_title = 'Claim not found';
-    require __DIR__ . '/includes/header.php';
+    if (is_panel()) panel_head($page_title); else require __DIR__ . '/includes/header.php';
     echo '<div class="card"><p class="muted">Claim (TID '.e($tid).') nahi mila.</p><p><a class="btn" href="'.BASE_URL.'/rghs_claims.php?scheme=RGHS">← Claims</a></p></div>';
-    require __DIR__ . '/includes/footer.php';
+    if (is_panel()) panel_foot(); else require __DIR__ . '/includes/footer.php';
     return;
 }
 $page_title = 'Claim ' . $c['tid'];
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE rghs_claims SET doctor_name=?, doctor_manual=?, notes=?, followup=?, assigned_to=?, updated_at=NOW() WHERE tid=?")
             ->execute([$doc ?: null, $doc!==''?1:$manual, $note ?: null, $fu, $assignee ?: null, $tid]);
         flash('Save ho gaya.');
-        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
+        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid).(is_panel()?'&panel=1':''));
     } elseif ($act === 'addnote') {
         $note = trim($_POST['note'] ?? '');
         if ($note !== '') {
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("INSERT INTO rghs_notes (tid,note,who) VALUES (?,?,?)")->execute([$tid, $note, $who]);
             flash('Note add ho gaya.');
         }
-        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
+        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid).(is_panel()?'&panel=1':''));
     } elseif ($act === 'upload_doc') {
         $who = current_user()['full_name'] ?? 'staff';
         if (!empty($_FILES['doc']['name']) && $_FILES['doc']['error'] === UPLOAD_ERR_OK) {
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             flash('Koi file select nahi ki.', 'error');
         }
-        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
+        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid).(is_panel()?'&panel=1':''));
     } elseif ($act === 'del_doc') {
         $did = (int)($_POST['doc_id'] ?? 0);
         $d = $pdo->prepare("SELECT stored_name FROM rghs_docs WHERE id=? AND tid=?");
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("DELETE FROM rghs_docs WHERE id=?")->execute([$did]);
             flash('Document delete ho gaya.');
         }
-        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
+        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid).(is_panel()?'&panel=1':''));
     } elseif ($act === 'add_query') {
         $q = trim($_POST['query_text'] ?? '');
         $ro = trim($_POST['raised_on'] ?? '');
@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$tid, $q, $ro ?: null, $who]);
             flash('Query add ho gayi.');
         }
-        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
+        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid).(is_panel()?'&panel=1':''));
     } elseif ($act === 'reply_query') {
         $qid = (int)($_POST['query_id'] ?? 0);
         $reply = trim($_POST['reply_text'] ?? '');
@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE rghs_queries SET reply_text=?, replied_on=CURDATE(), status=? WHERE id=? AND tid=?")
             ->execute([$reply ?: null, $close ? 'closed' : 'replied', $qid, $tid]);
         flash('Query update ho gayi.');
-        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid));
+        redirect(BASE_URL.'/rghs_claim.php?scheme=RGHS&tid='.urlencode($tid).(is_panel()?'&panel=1':''));
     }
 }
 
@@ -133,7 +133,7 @@ if (!empty($c['enrollment_id'])) {
     $m->execute([$c['enrollment_id'], $tid]); $more = $m->fetchAll();
 }
 
-require __DIR__ . '/includes/header.php';
+if (is_panel()) panel_head($page_title); else require __DIR__ . '/includes/header.php';
 ?>
 <div class="page-head">
     <h1>Claim <?= e($c['tid']) ?></h1>
@@ -347,4 +347,4 @@ require __DIR__ . '/includes/header.php';
 </div>
 <?php endif; ?>
 
-<?php require __DIR__ . '/includes/footer.php'; ?>
+<?php if (is_panel()) panel_foot(); else require __DIR__ . '/includes/footer.php'; ?>

@@ -17,9 +17,9 @@ $c = $st->fetch();
 
 if (!$c) {
     $page_title = 'Claim not found';
-    require __DIR__ . '/includes/header.php';
+    if (is_panel()) panel_head($page_title); else require __DIR__ . '/includes/header.php';
     echo '<div class="card"><p class="muted">Claim ('.e($id).') nahi mila.</p><p><a class="btn" href="'.BASE_URL.'/echs_claims.php?scheme=ECHS">← Claims</a></p></div>';
-    require __DIR__ . '/includes/footer.php';
+    if (is_panel()) panel_foot(); else require __DIR__ . '/includes/footer.php';
     return;
 }
 $page_title = 'Claim ' . $c['claim_id'];
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE echs_claims SET notes=?, followup=?, assigned_to=?, updated_at=NOW() WHERE claim_id=?")
             ->execute([$note ?: null, $fu, $assignee ?: null, $id]);
         flash('Save ho gaya.');
-        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id));
+        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id).(is_panel()?'&panel=1':''));
     } elseif ($act === 'save_doctors') {
         // multiple doctors on one claim, each with an amount; sum must equal the bill
         $names = (array)($_POST['doc_name'] ?? []);
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echs_log('doctor_split', $id.' · '.count($rows).' doctors · '.money($sum));
             flash('Doctor split save ho gaya.');
         }
-        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id).'#doctors');
+        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id).(is_panel()?'&panel=1':'').'#doctors');
     } elseif ($act === 'addnote') {
         $note = trim($_POST['note'] ?? '');
         if ($note !== '') {
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("INSERT INTO echs_notes (claim_id,note,who) VALUES (?,?,?)")->execute([$id, $note, $who]);
             flash('Note add ho gaya.');
         }
-        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id));
+        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id).(is_panel()?'&panel=1':''));
     } elseif ($act === 'upload_doc') {
         $who = current_user()['full_name'] ?? 'staff';
         if (!empty($_FILES['doc']['name']) && $_FILES['doc']['error'] === UPLOAD_ERR_OK) {
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else { flash('Upload fail hua.', 'error'); }
             }
         } else { flash('Koi file select nahi ki.', 'error'); }
-        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id));
+        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id).(is_panel()?'&panel=1':''));
     } elseif ($act === 'del_doc') {
         $did = (int)($_POST['doc_id'] ?? 0);
         $d = $pdo->prepare("SELECT stored_name FROM echs_docs WHERE id=? AND claim_id=?");
@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("DELETE FROM echs_docs WHERE id=?")->execute([$did]);
             flash('Document delete ho gaya.');
         }
-        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id));
+        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id).(is_panel()?'&panel=1':''));
     } elseif ($act === 'add_query') {
         $q = trim($_POST['query_text'] ?? '');
         $ro = trim($_POST['raised_on'] ?? '');
@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$id, $q, $ro ?: null, $who]);
             flash('Query add ho gayi.');
         }
-        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id));
+        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id).(is_panel()?'&panel=1':''));
     } elseif ($act === 'reply_query') {
         $qid = (int)($_POST['query_id'] ?? 0);
         $reply = trim($_POST['reply_text'] ?? '');
@@ -131,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE echs_queries SET reply_text=?, replied_on=CURDATE(), status=? WHERE id=? AND claim_id=?")
             ->execute([$reply ?: null, $close ? 'closed' : 'replied', $qid, $id]);
         flash('Query update ho gayi.');
-        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id));
+        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id).(is_panel()?'&panel=1':''));
     }
 }
 
@@ -160,7 +160,7 @@ if (!empty($c['card_id'])) {
 }
 
 $cat = $c['category'] ?: echs_category($c['status']);
-require __DIR__ . '/includes/header.php';
+if (is_panel()) panel_head($page_title); else require __DIR__ . '/includes/header.php';
 ?>
 <div class="page-head">
     <h1>Claim <?= e($c['claim_id']) ?></h1>
@@ -429,4 +429,4 @@ $editorRows = $claimDoctors ?: [['doctor_name'=>'','amount'=>'']];
 })();
 </script>
 
-<?php require __DIR__ . '/includes/footer.php'; ?>
+<?php if (is_panel()) panel_foot(); else require __DIR__ . '/includes/footer.php'; ?>

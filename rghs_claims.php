@@ -289,7 +289,8 @@ function addHidden(name,val){ var i=document.createElement('input'); i.type='hid
 document.querySelectorAll('tr.clk').forEach(function(tr){
     tr.addEventListener('click', function(e){
         if (e.target.closest('input,a,button,label,select')) return;
-        window.location.href = tr.getAttribute('data-href');
+        var url = tr.getAttribute('data-href');
+        if (window.openClaimDrawer) window.openClaimDrawer(url); else window.location.href = url;
     });
 });
 // auto-apply filters: koi bhi filter badlo, bina "Filter" dabaye result aa jaye

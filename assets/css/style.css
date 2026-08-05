@@ -149,6 +149,27 @@ body.sb-open .sb-backdrop{display:block}
 .pill-paid,.pill-settled{background:#ecfdf5;color:#047857}
 .pill-rejected{background:#fef2f2;color:#b91c1c}
 .pill-warn{background:#fffbeb;color:#a16207}
+/* ---------- Claim side-drawer ---------- */
+.claim-drawer{position:fixed;inset:0;z-index:3000;visibility:hidden;pointer-events:none}
+.claim-drawer.open{visibility:visible;pointer-events:auto}
+.claim-drawer .cd-backdrop{position:absolute;inset:0;background:rgba(15,30,61,.45);opacity:0;transition:opacity .25s}
+.claim-drawer.open .cd-backdrop{opacity:1}
+.claim-drawer .cd-panel{position:absolute;top:0;right:0;height:100%;width:min(820px,94vw);background:var(--bg,#F2F5FA);
+    box-shadow:-12px 0 40px rgba(0,0,0,.28);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.claim-drawer.open .cd-panel{transform:translateX(0)}
+.claim-drawer .cd-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card,#fff);border-bottom:1px solid var(--line)}
+.claim-drawer .cd-open{color:var(--muted);text-decoration:none;font-size:1.05rem;padding:2px 8px;border-radius:8px}
+.claim-drawer .cd-open:hover{background:var(--brand-50);color:var(--brand)}
+.claim-drawer .cd-close{border:none;background:var(--brand);color:#fff;width:32px;height:32px;border-radius:8px;font-size:1rem;cursor:pointer;line-height:1}
+.claim-drawer .cd-close:hover{filter:brightness(1.08)}
+.claim-drawer .cd-loading{padding:24px;color:var(--muted);text-align:center}
+.claim-drawer .cd-frame{flex:1;width:100%;border:0;background:var(--bg,#F2F5FA)}
+body.drawer-open{overflow:hidden}
+body.panelmode{padding:14px}
+body.panelmode .page-actions{display:none}
+body.panelmode .page-head{margin-top:0}
+@media (max-width:600px){ .claim-drawer .cd-panel{width:100vw} }
+
 .legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:8px;font-size:.8rem;color:var(--muted)}
 .legend .lg{display:inline-flex;align-items:center;gap:6px}
 .legend .lg i{width:11px;height:11px;border-radius:3px;display:inline-block}

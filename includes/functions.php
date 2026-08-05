@@ -174,6 +174,32 @@ function smart_search($q, array $textCols, array $fieldMap = [], $amountCol = nu
     return [$conds, $args];
 }
 
+/** True when a page is being loaded inside the claim side-drawer (chrome-less). */
+function is_panel() { return !empty($_GET['panel']) || !empty($_POST['panel']); }
+
+/** Minimal chrome-less page head for drawer/panel mode (no sidebar/topbar). */
+function panel_head($title) {
+    $cssv = @filemtime(__DIR__ . '/../assets/css/style.css') ?: '1';
+    echo '<!DOCTYPE html><html lang="hi"><head><meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        . '<title>' . e($title) . '</title>'
+        . '<link rel="stylesheet" href="' . BASE_URL . '/assets/css/style.css?v=' . $cssv . '">'
+        . '</head><body class="panelmode">'
+        . '<script>if(localStorage.getItem("theme")==="dark")document.body.classList.add("dark");</script>';
+    $f = flash();
+    if ($f) echo '<div class="flash flash-' . e($f['type']) . '">' . e($f['msg']) . '</div>';
+}
+
+/** Close panel-mode page; keep links + POST forms inside the drawer (append panel=1). */
+function panel_foot() {
+    echo '<script>'
+        . 'document.querySelectorAll("form").forEach(function(f){var m=(f.getAttribute("method")||"get").toLowerCase();'
+        . 'if(m==="post" && !f.querySelector("input[name=panel]")){var i=document.createElement("input");i.type="hidden";i.name="panel";i.value="1";f.appendChild(i);}});'
+        . 'document.querySelectorAll(\'a[href*="_claim.php"]\').forEach(function(a){var h=a.getAttribute("href")||"";'
+        . 'if(a.target!=="_blank" && h && !/[?&]panel=/.test(h)){a.setAttribute("href", h+(h.indexOf("?")>=0?"&":"?")+"panel=1");}});'
+        . '</script></body></html>';
+}
+
 /** Standard query/objection reason tags (shared by RGHS + ECHS query panels). */
 function query_reasons() {
     return ['Document missing','Amount mismatch','Eligibility','Signature/Stamp','Package/Rate','Discharge/Bill','Other'];
