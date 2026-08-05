@@ -21,6 +21,7 @@ if ($scheme === 'ECHS') {
         ['grp' => 'Main', 'items' => [
             ['k'=>'dashboard','t'=>'Dashboard','i'=>'dashboard','u'=>BASE_URL.'/dashboard.php?scheme=ECHS'],
             ['k'=>'claims','t'=>'Claims','i'=>'file','u'=>BASE_URL.'/echs_claims.php?scheme=ECHS'],
+            ['k'=>'queries','t'=>'Query Panel','i'=>'help','u'=>BASE_URL.'/echs_queries.php?scheme=ECHS'],
             ['k'=>'changes','t'=>'Kya Badla','i'=>'bell','u'=>BASE_URL.'/echs_changes.php?scheme=ECHS'],
             ['k'=>'tasks','t'=>'Tasks','i'=>'checks','u'=>BASE_URL.'/echs_tasks.php?scheme=ECHS'],
         ]],
@@ -45,6 +46,7 @@ if ($scheme === 'ECHS') {
         ['grp' => 'Main', 'items' => [
             ['k'=>'dashboard','t'=>'Dashboard','i'=>'dashboard','u'=>BASE_URL.'/dashboard.php?scheme=RGHS'],
             ['k'=>'claims','t'=>'Claims','i'=>'file','u'=>BASE_URL.'/rghs_claims.php?scheme=RGHS'],
+            ['k'=>'queries','t'=>'Query Panel','i'=>'help','u'=>BASE_URL.'/rghs_queries.php?scheme=RGHS'],
             ['k'=>'changes','t'=>'Kya Badla','i'=>'bell','u'=>BASE_URL.'/rghs_changes.php?scheme=RGHS'],
             ['k'=>'tasks','t'=>'Tasks','i'=>'checks','u'=>BASE_URL.'/rghs_tasks.php?scheme=RGHS'],
         ]],
