@@ -32,7 +32,7 @@ jobs:
           # that no longer exist on the server, and the action crashed with
           # "550 No such file or directory" while trying to delete them.
           # A new state name makes it upload everything and delete nothing.
-          state-name: .noble-sync-v2.json
+          state-name: .noble-sync-v3.json
           dangerous-clean-slate: false
           exclude: |
             **/.git*
@@ -62,7 +62,7 @@ jobs:
           port:       21
           timeout:    600000
           server-dir: ${{ secrets.FTP_REMOTE_DIR || 'noble/' }}
-          state-name: .noble-sync-v2.json
+          state-name: .noble-sync-v3.json
           dangerous-clean-slate: false
           exclude: |
             **/.git*
@@ -90,7 +90,7 @@ jobs:
           port:       21
           timeout:    600000
           server-dir: ${{ secrets.FTP_REMOTE_DIR || 'noble/' }}
-          state-name: .noble-sync-v2.json
+          state-name: .noble-sync-v3.json
           dangerous-clean-slate: false
           exclude: |
             **/.git*
