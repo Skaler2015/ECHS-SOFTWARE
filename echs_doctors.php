@@ -228,44 +228,6 @@ require __DIR__ . '/includes/header.php';
     <div class="stat-card warn"><div class="stat-num"><?= number_format($unassigned) ?></div><div class="stat-lbl">Bina doctor ke claims</div></div>
 </div>
 
-<!-- ================= C) RULE-BASED AUTO-ASSIGN (top: customer's #1 need) ==== -->
-<div class="card form">
-    <h2>⚡ Auto-Assign (rule based)</h2>
-    <p class="muted small">Har rule sirf <strong>abhi tak un-assigned</strong> (<?= number_format($unassigned) ?>) claims par lagta hai. Neeche count = kitne claims is rule se assign honge.</p>
-    <form method="post" onsubmit="return confirm('Yeh rule un-assigned claims par apply karega. Continue?');">
-        <?= csrf_field() ?>
-        <input type="hidden" name="act" value="auto_assign">
-        <input type="hidden" name="return" value="<?= e($curUrl) ?>">
-        <div class="grid3">
-            <div class="fld">
-                <label>Rule chunein</label>
-                <select name="rule" required>
-                    <option value="opd">All OPD &rarr; doctor (<?= number_format($prev['opd']) ?> claims)</option>
-                    <option value="ipd">All IPD &rarr; doctor (<?= number_format($prev['ipd']) ?> claims)</option>
-                    <option value="emg">All Emergency &rarr; doctor (<?= number_format($prev['emg']) ?> claims)</option>
-                    <option value="all">All remaining un-assigned &rarr; doctor (<?= number_format($prev['all']) ?> claims)</option>
-                </select>
-            </div>
-            <div class="fld">
-                <label>Doctor *</label>
-                <input list="echsDocs" name="doctor_name" required placeholder="Dr. ...">
-            </div>
-            <div class="fld" style="align-self:end">
-                <button class="btn btn-primary" type="submit">Apply rule</button>
-            </div>
-        </div>
-    </form>
-    <table class="tbl" style="margin-top:6px">
-        <thead><tr><th>Rule</th><th class="r">Un-assigned claims affected</th></tr></thead>
-        <tbody>
-            <tr><td>All OPD</td><td class="r"><?= number_format($prev['opd']) ?></td></tr>
-            <tr><td>All IPD</td><td class="r"><?= number_format($prev['ipd']) ?></td></tr>
-            <tr><td>All Emergency (admit_type = E)</td><td class="r"><?= number_format($prev['emg']) ?></td></tr>
-            <tr><td>All remaining un-assigned</td><td class="r"><?= number_format($prev['all']) ?></td></tr>
-        </tbody>
-    </table>
-</div>
-
 <!-- ================= A) DOCTOR MASTER ===================================== -->
 <div class="card form">
     <h2>➕ Naya Doctor</h2>
