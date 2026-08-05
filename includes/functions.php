@@ -174,6 +174,13 @@ function smart_search($q, array $textCols, array $fieldMap = [], $amountCol = nu
     return [$conds, $args];
 }
 
+/** Standard query/objection reason tags (shared by RGHS + ECHS query panels). */
+function query_reasons() {
+    return ['Document missing','Amount mismatch','Eligibility','Signature/Stamp','Package/Rate','Discharge/Bill','Other'];
+}
+/** Query priorities. */
+function query_priorities() { return ['high'=>'High','medium'=>'Medium','low'=>'Low']; }
+
 /**
  * Generate the next bill number for a scheme, e.g. RGHS-0001.
  */

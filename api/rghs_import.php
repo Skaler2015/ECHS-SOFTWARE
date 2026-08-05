@@ -199,6 +199,23 @@ try {
     exit;
 }
 
+// auto query tracking: open a draft query for claims that entered "query", and
+// auto-close the auto-created ones once the claim moves past the query stage.
+try {
+    $inTids = implode(',', array_fill(0, count($tids), '?'));
+    $pdo->prepare("INSERT INTO rghs_queries (tid, query_text, status, priority, auto, who, raised_on)
+        SELECT c.tid, CONCAT('Auto: ', COALESCE(NULLIF(c.status,''),'Query')), 'open', 'medium', 1, 'auto', CURDATE()
+        FROM rghs_claims c
+        WHERE c.tid IN ($inTids) AND (c.status LIKE '%QUER%' OR c.status LIKE '%Quer%')
+          AND NOT EXISTS (SELECT 1 FROM rghs_queries q WHERE q.tid = c.tid COLLATE utf8mb4_unicode_ci)")
+        ->execute($tids);
+    $pdo->prepare("UPDATE rghs_queries q JOIN rghs_claims c ON c.tid = q.tid COLLATE utf8mb4_unicode_ci
+        SET q.status='closed', q.replied_on=CURDATE(), q.reply_text=COALESCE(q.reply_text, CONCAT('Auto-closed: ', c.status))
+        WHERE c.tid IN ($inTids) AND q.auto=1 AND q.status<>'closed'
+          AND c.status NOT LIKE '%QUER%' AND c.status NOT LIKE '%Quer%'")
+        ->execute($tids);
+} catch (Exception $e) {}
+
 // log the upload once per file (on the first batch)
 if (!empty($body['first'])) {
     try {

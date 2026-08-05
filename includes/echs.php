@@ -169,6 +169,11 @@ function echs_ensure_table() {
         `query_text` TEXT NULL,
         `reply_text` TEXT NULL,
         `status` VARCHAR(20) NOT NULL DEFAULT 'open',
+        `qtype` VARCHAR(40) NULL,
+        `priority` VARCHAR(10) NULL DEFAULT 'medium',
+        `assigned_to` VARCHAR(120) NULL,
+        `due_date` DATE NULL,
+        `auto` TINYINT(1) NOT NULL DEFAULT 0,
         `raised_on` DATE NULL,
         `replied_on` DATE NULL,
         `who` VARCHAR(120) NULL,
@@ -176,6 +181,12 @@ function echs_ensure_table() {
         KEY `idx_eq_cid` (`claim_id`),
         KEY `idx_eq_status` (`status`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // migrate older echs_queries tables
+    try {
+        $qc = []; foreach ($pdo->query("SHOW COLUMNS FROM `echs_queries`") as $c) $qc[strtolower($c['Field'])] = true;
+        foreach (['qtype'=>"VARCHAR(40) NULL",'priority'=>"VARCHAR(10) NULL DEFAULT 'medium'",'assigned_to'=>"VARCHAR(120) NULL",'due_date'=>"DATE NULL",'auto'=>"TINYINT(1) NOT NULL DEFAULT 0"] as $col=>$def)
+            if (!isset($qc[$col])) $pdo->exec("ALTER TABLE `echs_queries` ADD COLUMN `$col` $def");
+    } catch (Exception $e) {}
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_targets` (
         `ym` CHAR(7) NOT NULL PRIMARY KEY,

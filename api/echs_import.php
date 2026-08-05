@@ -136,6 +136,22 @@ try {
     exit;
 }
 
+// auto query tracking: open a draft query for claims that entered "query/need-info",
+// and auto-close the auto-created ones once the claim moves past that stage.
+try {
+    $inCids = implode(',', array_fill(0, count($cids), '?'));
+    $pdo->prepare("INSERT INTO echs_queries (claim_id, query_text, status, priority, auto, who, raised_on)
+        SELECT c.claim_id, CONCAT('Auto: ', COALESCE(NULLIF(c.status,''),'Need More Information')), 'open', 'medium', 1, 'auto', CURDATE()
+        FROM echs_claims c
+        WHERE c.claim_id IN ($inCids) AND c.category='query'
+          AND NOT EXISTS (SELECT 1 FROM echs_queries q WHERE q.claim_id = c.claim_id COLLATE utf8mb4_unicode_ci)")
+        ->execute($cids);
+    $pdo->prepare("UPDATE echs_queries q JOIN echs_claims c ON c.claim_id = q.claim_id COLLATE utf8mb4_unicode_ci
+        SET q.status='closed', q.replied_on=CURDATE(), q.reply_text=COALESCE(q.reply_text, CONCAT('Auto-closed: ', c.status))
+        WHERE c.claim_id IN ($inCids) AND q.auto=1 AND q.status<>'closed' AND c.category<>'query'")
+        ->execute($cids);
+} catch (Exception $e) {}
+
 if (!empty($body['first'])) {
     try {
         $pdo->prepare("INSERT INTO echs_uploads (filename, status_label, rows, who) VALUES (?,?,?,?)")

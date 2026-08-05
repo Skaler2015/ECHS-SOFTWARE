@@ -313,6 +313,11 @@ function rghs_ensure_table() {
         `query_text` TEXT NULL,
         `reply_text` TEXT NULL,
         `status` VARCHAR(20) NOT NULL DEFAULT 'open',
+        `qtype` VARCHAR(40) NULL,
+        `priority` VARCHAR(10) NULL DEFAULT 'medium',
+        `assigned_to` VARCHAR(120) NULL,
+        `due_date` DATE NULL,
+        `auto` TINYINT(1) NOT NULL DEFAULT 0,
         `raised_on` DATE NULL,
         `replied_on` DATE NULL,
         `who` VARCHAR(120) NULL,
@@ -320,6 +325,12 @@ function rghs_ensure_table() {
         KEY `idx_rq_tid` (`tid`),
         KEY `idx_rq_status` (`status`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    // migrate older rghs_queries tables
+    try {
+        $qc = []; foreach ($pdo->query("SHOW COLUMNS FROM `rghs_queries`") as $c) $qc[strtolower($c['Field'])] = true;
+        foreach (['qtype'=>"VARCHAR(40) NULL",'priority'=>"VARCHAR(10) NULL DEFAULT 'medium'",'assigned_to'=>"VARCHAR(120) NULL",'due_date'=>"DATE NULL",'auto'=>"TINYINT(1) NOT NULL DEFAULT 0"] as $col=>$def)
+            if (!isset($qc[$col])) $pdo->exec("ALTER TABLE `rghs_queries` ADD COLUMN `$col` $def");
+    } catch (Exception $e) {}
 
     $done = true;
 }
