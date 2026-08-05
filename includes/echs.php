@@ -131,6 +131,18 @@ function echs_ensure_table() {
         UNIQUE KEY `uq_ed_name` (`name`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+    // per-claim doctor split: many doctors on one claim, each with an amount
+    // (the amounts should add up to the claim's bill)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_claim_doctors` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `claim_id` VARCHAR(40) NOT NULL,
+        `doctor_name` VARCHAR(160) NOT NULL,
+        `amount` DECIMAL(14,2) NOT NULL DEFAULT 0,
+        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY `idx_ecd_cid` (`claim_id`),
+        KEY `idx_ecd_doc` (`doctor_name`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_tasks` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `claim_id` VARCHAR(40) NULL,

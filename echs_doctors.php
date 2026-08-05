@@ -212,6 +212,16 @@ require __DIR__ . '/includes/header.php';
     <div class="page-actions"><a class="btn" href="<?= BASE_URL ?>/echs_claims.php?scheme=ECHS">All Claims</a></div>
 </div>
 
+<div class="card form">
+    <h2>🔎 Claim ka doctor(s) set karein</h2>
+    <p class="muted small">Claim ID likhiye — us claim ka doctor set/edit karne ke liye. Ek claim par <strong>kai doctor + alag-alag amount</strong> daal sakte hain (unka total bill ke barabar hona chahiye).</p>
+    <form onsubmit="var v=document.getElementById('goClaim').value.trim(); if(v){location.href='<?= BASE_URL ?>/echs_claim.php?scheme=ECHS&id='+encodeURIComponent(v)+'#doctors';} return false;"
+          style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="goClaim" placeholder="Claim ID (e.g. 22613845)" style="flex:1;min-width:200px;padding:9px 11px;border:1px solid var(--line);border-radius:9px">
+        <button class="btn btn-primary">Doctor set karein →</button>
+    </form>
+</div>
+
 <div class="stat-grid">
     <div class="stat-card"><div class="stat-num"><?= number_format(count($names)) ?></div><div class="stat-lbl">Total Doctors</div></div>
     <div class="stat-card ok"><div class="stat-num"><?= number_format($assigned) ?></div><div class="stat-lbl">Assigned claims</div></div>

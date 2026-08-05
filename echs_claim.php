@@ -28,16 +28,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $act = $_POST['act'] ?? '';
     if ($act === 'save') {
-        $doc = trim($_POST['doctor_name'] ?? '');
         $note = trim($_POST['notes'] ?? '');
         $assignee = trim($_POST['assigned_to'] ?? '');
         $fu = !empty($_POST['followup']) ? 1 : 0;
-        $manual = ($doc !== '' && $doc !== ($c['doctor_name'] ?? '')) ? 1 : (int)$c['doctor_manual'];
-        $pdo->prepare("UPDATE echs_claims SET doctor_name=?, doctor_manual=?, notes=?, followup=?, assigned_to=?, updated_at=NOW() WHERE claim_id=?")
-            ->execute([$doc ?: null, $doc!==''?1:$manual, $note ?: null, $fu, $assignee ?: null, $id]);
-        if ($doc !== '') { try { $pdo->prepare("INSERT IGNORE INTO echs_doctors (name) VALUES (?)")->execute([$doc]); } catch (Exception $e) {} }
+        $pdo->prepare("UPDATE echs_claims SET notes=?, followup=?, assigned_to=?, updated_at=NOW() WHERE claim_id=?")
+            ->execute([$note ?: null, $fu, $assignee ?: null, $id]);
         flash('Save ho gaya.');
         redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id));
+    } elseif ($act === 'save_doctors') {
+        // multiple doctors on one claim, each with an amount; sum must equal the bill
+        $names = (array)($_POST['doc_name'] ?? []);
+        $amts  = (array)($_POST['doc_amount'] ?? []);
+        $target = ($_POST['target'] ?? 'claim') === 'approved' ? 'approved' : 'claim';
+        $base = $target === 'approved' ? (float)$c['approved_amt'] : (float)$c['claim_amt'];
+        $rows = []; $sum = 0.0; $bad = false;
+        foreach ($names as $i => $nm) {
+            $nm  = trim((string)$nm);
+            $amt = (float)preg_replace('/[^0-9.]/', '', (string)($amts[$i] ?? '0'));
+            if ($nm === '' && $amt == 0) continue;
+            if ($nm === '') { $bad = true; continue; }
+            $rows[] = [$nm, $amt]; $sum += $amt;
+        }
+        if ($bad) {
+            flash('Har row me doctor ka naam zaroori hai.', 'error');
+        } elseif (!$rows) {
+            $pdo->prepare("DELETE FROM echs_claim_doctors WHERE claim_id=?")->execute([$id]);
+            $pdo->prepare("UPDATE echs_claims SET doctor_name=NULL, updated_at=NOW() WHERE claim_id=?")->execute([$id]);
+            flash('Doctors hata diye.');
+        } elseif ($base > 0 && abs($sum - $base) > 1.0) {
+            flash('Doctor amounts ka total '.money($sum).' hai, par bill '.money($base).' hai. Farq: '.money(abs($sum-$base)).' — dono barabar karein.', 'error');
+        } else {
+            $pdo->prepare("DELETE FROM echs_claim_doctors WHERE claim_id=?")->execute([$id]);
+            $ins = $pdo->prepare("INSERT INTO echs_claim_doctors (claim_id,doctor_name,amount) VALUES (?,?,?)");
+            $ddoc = $pdo->prepare("INSERT IGNORE INTO echs_doctors (name) VALUES (?)");
+            $uniq = [];
+            foreach ($rows as $r) { $ins->execute([$id, $r[0], $r[1]]); try { $ddoc->execute([$r[0]]); } catch (Exception $e) {} $uniq[$r[0]] = true; }
+            $pdo->prepare("UPDATE echs_claims SET doctor_name=?, doctor_manual=1, updated_at=NOW() WHERE claim_id=?")
+                ->execute([implode(', ', array_keys($uniq)), $id]);
+            echs_log('doctor_split', $id.' · '.count($rows).' doctors · '.money($sum));
+            flash('Doctor split save ho gaya.');
+        }
+        redirect(BASE_URL.'/echs_claim.php?scheme=ECHS&id='.urlencode($id).'#doctors');
     } elseif ($act === 'addnote') {
         $note = trim($_POST['note'] ?? '');
         if ($note !== '') {
@@ -117,6 +148,10 @@ $docsList->execute([$id]); $docsList = $docsList->fetchAll();
 $queriesList = $pdo->prepare("SELECT * FROM echs_queries WHERE claim_id=? ORDER BY id DESC");
 $queriesList->execute([$id]); $queriesList = $queriesList->fetchAll();
 
+$cdoc = $pdo->prepare("SELECT * FROM echs_claim_doctors WHERE claim_id=? ORDER BY id");
+$cdoc->execute([$id]); $claimDoctors = $cdoc->fetchAll();
+$cdocSum = 0; foreach ($claimDoctors as $cd) $cdocSum += (float)$cd['amount'];
+
 // other claims of same card
 $more = [];
 if (!empty($c['card_id'])) {
@@ -166,13 +201,54 @@ require __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<?php
+$billClaim = (float)$c['claim_amt']; $billAppr = (float)$c['approved_amt'];
+$editorRows = $claimDoctors ?: [['doctor_name'=>'','amount'=>'']];
+?>
+<a id="doctors"></a>
+<div class="card">
+    <h2>🩺 Doctors & amount split</h2>
+    <p class="muted small">Ek claim par kai doctor ho sakte hain — har doctor ki alag amount likhein. Sab amounts ka <strong>total = bill</strong> hona chahiye (tabhi save hoga).</p>
+    <form method="post" id="docsplitForm">
+        <?= csrf_field() ?><input type="hidden" name="act" value="save_doctors">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <label class="fld" style="margin:0"><span class="muted small">Bill (match target)</span>
+                <select name="target" id="splitTarget">
+                    <option value="claim" data-amt="<?= $billClaim ?>">Net claim — <?= money($billClaim) ?></option>
+                    <option value="approved" data-amt="<?= $billAppr ?>" <?= ($cat==='settled')?'selected':'' ?>>Approved/Settled — <?= money($billAppr) ?></option>
+                </select>
+            </label>
+            <div class="split-meter" style="flex:1;min-width:200px">
+                <div class="muted small">Doctors total: <strong id="splitSum">₹0</strong> / Bill: <strong id="splitBase">₹0</strong></div>
+                <div style="background:var(--line);border-radius:999px;height:10px;overflow:hidden;margin-top:4px"><div id="splitBar" style="height:100%;width:0;background:var(--brand);transition:width .2s"></div></div>
+                <div class="small" id="splitMsg" style="margin-top:4px"></div>
+            </div>
+        </div>
+        <datalist id="rdocs"><?php foreach (echs_doctor_list() as $d): ?><option value="<?= e($d) ?>"><?php endforeach; ?></datalist>
+        <div id="docRows">
+        <?php foreach ($editorRows as $r): ?>
+            <div class="docrow" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+                <input name="doc_name[]" list="rdocs" placeholder="Doctor naam" value="<?= e($r['doctor_name']) ?>" style="flex:1;min-width:150px;padding:8px;border:1px solid var(--line);border-radius:9px">
+                <input name="doc_amount[]" class="docamt" inputmode="decimal" placeholder="Amount ₹" value="<?= $r['amount']!==''?e(rtrim(rtrim(number_format((float)$r['amount'],2,'.',''),'0'),'.')):'' ?>" style="width:130px;padding:8px;border:1px solid var(--line);border-radius:9px;text-align:right">
+                <button type="button" class="btn btn-sm btn-danger docdel" title="Hatao">✕</button>
+            </div>
+        <?php endforeach; ?>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+            <button type="button" class="btn btn-sm" id="addDocRow">+ Doctor add</button>
+            <button type="button" class="btn btn-sm" id="fillRemain">Baaki amount bhar do</button>
+            <button type="button" class="btn btn-sm" id="splitEqual">Barabar baant do</button>
+            <span style="flex:1"></span>
+            <button class="btn btn-primary" id="splitSave">Save doctors</button>
+        </div>
+    </form>
+</div>
+
 <div class="detail-grid">
     <div class="card form">
-        <h2>Doctor · Assign · Flag</h2>
+        <h2>Assign · Flag · Note</h2>
         <form method="post">
             <?= csrf_field() ?><input type="hidden" name="act" value="save">
-            <div class="fld"><label>Treating doctor</label><input name="doctor_name" list="rdocs" value="<?= e($c['doctor_name']) ?>">
-                <datalist id="rdocs"><?php foreach (echs_doctor_list() as $d): ?><option value="<?= e($d) ?>"><?php endforeach; ?></datalist></div>
             <div class="fld"><label>Assigned to (staff)</label>
                 <select name="assigned_to"><option value="">— koi nahi —</option>
                 <?php foreach ($staff as $sf): ?><option value="<?= e($sf) ?>" <?= ($c['assigned_to']??'')===$sf?'selected':'' ?>><?= e($sf) ?></option><?php endforeach; ?></select></div>
@@ -293,5 +369,64 @@ require __DIR__ . '/includes/header.php';
     </table>
 </div>
 <?php endif; ?>
+
+<script>
+(function(){
+    var form = document.getElementById('docsplitForm');
+    if (!form) return;
+    var rows = document.getElementById('docRows');
+    var targetSel = document.getElementById('splitTarget');
+    var sumEl = document.getElementById('splitSum'), baseEl = document.getElementById('splitBase');
+    var barEl = document.getElementById('splitBar'), msgEl = document.getElementById('splitMsg');
+    function inr(n){ return '₹' + (Math.round(n*100)/100).toLocaleString('en-IN'); }
+    function base(){ var o = targetSel.options[targetSel.selectedIndex]; return parseFloat(o.getAttribute('data-amt')||'0')||0; }
+    function sum(){ var s=0; rows.querySelectorAll('.docamt').forEach(function(a){ s += parseFloat(String(a.value).replace(/[^0-9.]/g,''))||0; }); return s; }
+    function refresh(){
+        var s=sum(), b=base();
+        sumEl.textContent=inr(s); baseEl.textContent=inr(b);
+        var pct = b>0 ? Math.min(100, s/b*100) : (s>0?100:0);
+        barEl.style.width = pct+'%';
+        var diff = Math.round((s-b)*100)/100;
+        if (b<=0){ barEl.style.background='var(--brand)'; msgEl.textContent='Is claim ka bill 0 hai — koi bhi amount chalega.'; msgEl.style.color='var(--muted)'; }
+        else if (Math.abs(diff)<=1){ barEl.style.background='#16A34A'; msgEl.textContent='✅ Total bill ke barabar hai.'; msgEl.style.color='#16A34A'; }
+        else if (diff<0){ barEl.style.background='#f59e0b'; msgEl.textContent='Abhi '+inr(-diff)+' baaki hai.'; msgEl.style.color='#b45309'; }
+        else { barEl.style.background='#dc3545'; msgEl.textContent='⚠️ '+inr(diff)+' zyada hai — kam karein.'; msgEl.style.color='#dc3545'; }
+    }
+    function newRow(name, amt){
+        var div=document.createElement('div'); div.className='docrow';
+        div.style.cssText='display:flex;gap:8px;margin-bottom:8px;align-items:center';
+        div.innerHTML='<input name="doc_name[]" list="rdocs" placeholder="Doctor naam" style="flex:1;min-width:150px;padding:8px;border:1px solid var(--line);border-radius:9px">'
+            +'<input name="doc_amount[]" class="docamt" inputmode="decimal" placeholder="Amount ₹" style="width:130px;padding:8px;border:1px solid var(--line);border-radius:9px;text-align:right">'
+            +'<button type="button" class="btn btn-sm btn-danger docdel" title="Hatao">✕</button>';
+        rows.appendChild(div);
+        if(name) div.querySelector('input[name="doc_name[]"]').value=name;
+        if(amt!=null) div.querySelector('.docamt').value=amt;
+        return div;
+    }
+    document.getElementById('addDocRow').addEventListener('click', function(){ newRow(); refresh(); });
+    document.getElementById('fillRemain').addEventListener('click', function(){
+        var b=base(), s=sum(), rem=Math.round((b-s)*100)/100;
+        if (rem<=0){ return; }
+        var empty=null; rows.querySelectorAll('.docrow').forEach(function(r){ var a=r.querySelector('.docamt'); if(!empty && (!a.value || parseFloat(a.value)===0)) empty=a; });
+        if (empty) empty.value=rem; else newRow('', rem);
+        refresh();
+    });
+    document.getElementById('splitEqual').addEventListener('click', function(){
+        var b=base(); var rs=rows.querySelectorAll('.docrow'); if(!b||!rs.length) return;
+        var each=Math.floor(b/rs.length*100)/100; var used=0;
+        rs.forEach(function(r,i){ var a=r.querySelector('.docamt'); var v=(i===rs.length-1)?Math.round((b-used)*100)/100:each; a.value=v; used+=v; });
+        refresh();
+    });
+    rows.addEventListener('click', function(e){ if(e.target.classList.contains('docdel')){ if(rows.querySelectorAll('.docrow').length>1) e.target.closest('.docrow').remove(); else { e.target.closest('.docrow').querySelectorAll('input').forEach(function(i){i.value='';}); } refresh(); } });
+    rows.addEventListener('input', function(e){ if(e.target.classList.contains('docamt')) refresh(); });
+    targetSel.addEventListener('change', refresh);
+    form.addEventListener('submit', function(e){
+        var b=base(), s=sum();
+        var hasRow=false; rows.querySelectorAll('.docrow').forEach(function(r){ if(r.querySelector('input[name="doc_name[]"]').value.trim()!=='') hasRow=true; });
+        if (hasRow && b>0 && Math.abs(s-b)>1){ e.preventDefault(); alert('Doctor amounts ka total '+inr(s)+' hai, par bill '+inr(b)+' hai. Pehle dono barabar karein (ya "Baaki amount bhar do" dabayein).'); }
+    });
+    refresh();
+})();
+</script>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
