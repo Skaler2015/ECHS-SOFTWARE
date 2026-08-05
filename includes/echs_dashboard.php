@@ -84,7 +84,7 @@ $docs = $pdo->query("SELECT doctor_name, COUNT(*) n, COALESCE(SUM(claim_amt),0) 
 
 // recent status changes
 $changes = $pdo->query("SELECT h.claim_id, h.from_status, h.to_status, h.changed_at, c.patient_name
-    FROM echs_claim_history h LEFT JOIN echs_claims c ON c.claim_id = h.claim_id
+    FROM echs_claim_history h LEFT JOIN echs_claims c ON c.claim_id = h.claim_id COLLATE utf8mb4_unicode_ci
     WHERE h.from_status IS NOT NULL ORDER BY h.changed_at DESC LIMIT 10")->fetchAll();
 
 $totCat = array_sum($cat) ?: 1;

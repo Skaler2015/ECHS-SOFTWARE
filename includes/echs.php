@@ -73,7 +73,7 @@ function echs_ensure_table() {
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_claims` (
         `claim_id` VARCHAR(40) NOT NULL PRIMARY KEY
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     // add all canonical columns
     $existing = [];
@@ -113,7 +113,7 @@ function echs_ensure_table() {
         `to_status` VARCHAR(90) NULL,
         `changed_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         KEY `idx_ech_cid` (`claim_id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_uploads` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -122,14 +122,14 @@ function echs_ensure_table() {
         `rows` INT DEFAULT 0,
         `who` VARCHAR(120) NULL,
         `uploaded_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_doctors` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `name` VARCHAR(160) NOT NULL,
         `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY `uq_ed_name` (`name`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_tasks` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -140,7 +140,7 @@ function echs_ensure_table() {
         `who` VARCHAR(120) NULL,
         `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         KEY `idx_et_done` (`done`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_notes` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -149,7 +149,7 @@ function echs_ensure_table() {
         `who` VARCHAR(120) NULL,
         `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         KEY `idx_en_cid` (`claim_id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_docs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -161,7 +161,7 @@ function echs_ensure_table() {
         `who` VARCHAR(120) NULL,
         `uploaded_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         KEY `idx_ed2_cid` (`claim_id`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_queries` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -175,14 +175,14 @@ function echs_ensure_table() {
         `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         KEY `idx_eq_cid` (`claim_id`),
         KEY `idx_eq_status` (`status`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_targets` (
         `ym` CHAR(7) NOT NULL PRIMARY KEY,
         `claims_target` INT DEFAULT 0,
         `amount_target` DECIMAL(14,2) DEFAULT 0,
         `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_activity` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -191,7 +191,7 @@ function echs_ensure_table() {
         `detail` VARCHAR(255) NULL,
         `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         KEY `idx_ea_created` (`created_at`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS `echs_backups` (
         `snap_date` DATE NOT NULL PRIMARY KEY,
@@ -199,7 +199,7 @@ function echs_ensure_table() {
         `claims_n` INT DEFAULT 0,
         `bytes` INT DEFAULT 0,
         `saved_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $done = true;
 }
