@@ -18,6 +18,12 @@ if ($scheme === 'RGHS') {
     return;
 }
 
+// Medical Store (Pharmacy) — upload-based invoice tracker.
+if ($scheme === 'STORE') {
+    require __DIR__ . '/includes/store_dashboard.php';
+    return;
+}
+
 // stats
 $stat = ['patients'=>0,'bills'=>0,'pending'=>0,'submitted'=>0,'paid'=>0,'amount'=>0,'paid_amount'=>0];
 try {

@@ -41,6 +41,21 @@ if ($scheme === 'ECHS') {
         ]],
     ];
     $searchAction = BASE_URL.'/echs_claims.php';
+} elseif ($scheme === 'STORE') {
+    $menu = [
+        ['grp' => 'Main', 'items' => [
+            ['k'=>'dashboard','t'=>'Dashboard','i'=>'dashboard','u'=>BASE_URL.'/dashboard.php?scheme=STORE'],
+            ['k'=>'claims','t'=>'Invoices','i'=>'file','u'=>BASE_URL.'/store_claims.php?scheme=STORE'],
+        ]],
+        ['grp' => 'Data', 'items' => [
+            ['k'=>'reports','t'=>'Reports','i'=>'chart','u'=>BASE_URL.'/store_reports.php?scheme=STORE'],
+            ['k'=>'upload','t'=>'Upload Excel','i'=>'upload','u'=>BASE_URL.'/store_upload.php?scheme=STORE'],
+        ]],
+        ['grp' => 'Account', 'items' => [
+            ['k'=>'settings','t'=>'Settings','i'=>'settings','u'=>BASE_URL.'/settings.php'],
+        ]],
+    ];
+    $searchAction = BASE_URL.'/store_claims.php';
 } else {
     $menu = [
         ['grp' => 'Main', 'items' => [
@@ -136,6 +151,7 @@ if(localStorage.getItem('sidebar')==='collapsed')document.body.classList.add('sb
             <div class="scheme-switch" title="Portal switch karein">
                 <a class="ss-opt <?= $scheme==='RGHS'?'on':'' ?>" href="<?= BASE_URL ?>/dashboard.php?scheme=RGHS">RGHS</a>
                 <a class="ss-opt <?= $scheme==='ECHS'?'on':'' ?>" href="<?= BASE_URL ?>/dashboard.php?scheme=ECHS">ECHS</a>
+                <a class="ss-opt <?= $scheme==='STORE'?'on':'' ?>" href="<?= BASE_URL ?>/dashboard.php?scheme=STORE">💊 Store</a>
             </div>
             <form class="topsearch" method="get" action="<?= $searchAction ?>" role="search">
                 <input type="hidden" name="scheme" value="<?= $scheme ?>">

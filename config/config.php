@@ -41,6 +41,14 @@ $SCHEMES = [
         'icon'  => '🎖️',
         'card_label' => 'ECHS Card No.',
     ],
+    'STORE' => [
+        'code'  => 'STORE',
+        'name'  => 'RGHS Medical Store (Pharmacy)',
+        'short' => 'Medical Store',
+        'color' => '#2E7D4F',
+        'icon'  => '💊',
+        'card_label' => 'RGHS Card No.',
+    ],
 ];
 
 // ---- Error reporting: keep OFF in production ----

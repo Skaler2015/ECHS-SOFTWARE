@@ -18,6 +18,16 @@ function scheme_counts($scheme) {
         } catch (Exception $e) {}
         return $c;
     }
+    if ($scheme === 'STORE') {
+        $c = ['labels'=>['Invoices','Approved','Pending'], 'patients'=>0,'bills'=>0,'pending'=>0,'amount'=>0,'echs'=>false];
+        try {
+            $r = db()->query("SELECT COUNT(*) n, COALESCE(SUM(claim_amt),0) s FROM store_claims")->fetch();
+            $c['patients'] = (int)($r['n'] ?? 0); $c['amount'] = (float)($r['s'] ?? 0);
+            $ap = db()->query("SELECT COUNT(*) n FROM store_claims WHERE category='approved'")->fetch();
+            $c['bills'] = (int)($ap['n'] ?? 0); $c['pending'] = max(0, $c['patients'] - $c['bills']);
+        } catch (Exception $e) {}
+        return $c;
+    }
     // RGHS is now an upload-based claims tracker (rghs_claims).
     $c = ['labels'=>['Claims','Approved','Pending'], 'patients'=>0,'bills'=>0,'pending'=>0,'amount'=>0,'echs'=>false];
     try {
